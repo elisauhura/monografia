@@ -1,0 +1,82 @@
+%!TeX root=../tese.tex
+%("dica" para o editor de texto: este arquivo é parte de um documento maior)
+% para saber mais: https://tex.stackexchange.com/q/78101/183146
+
+%% ------------------------------------------------------------------------- %%
+\chapter{Introdução}
+\label{cap:introducao}
+
+A RISC-V é uma arquitetura de conjunto de instruções (ISA do inglês 
+\emph{instruction set architecture}) aberta e disponível de forma gratuita 
+tanto para uso na indústria quanto na academia. 
+Ela é padronizada e patrocinada pela \emph{RISC-V International}, uma organização 
+internacional sem fins lucrativos que possui dentre seus membros grandes 
+empresas do setor de tecnologia como \emph{Google}, \emph{Alibaba Cloud} e 
+\emph{Western Digital} \citep{MEM}.
+
+Ela teve seu início em 2010 através do trabalho do professor Krste Asanović e os 
+alunos de pós graduação Yunsup Lee e Andrew Waterman no \emph{Parallel Computing
+Laboratory} na \emph{UC Berkeley} \citep{RVH}, sendo desde o começo disponível 
+através de alguma licença aberta.
+
+O \emph{V} no nome do padrão se refere ao número 5, fazendo com que as pronúncias
+\emph{risc-cinco} e \emph{risc-five} sejam mais adequadas que \emph{risqc-ve}.
+O número refere-se ao fato da RISC-V ser a quinta grande ISA desenvolvida na 
+\emph{UC Berkeley}, referência importante pois tendo como objetivo ser a ISA 
+padrão para todos os dispositivos computacionais \citep{Asanović:EECS-2014-146}, 
+diversas decisões de design da arquitetura foram tomadas considerando decisões 
+realizadas por arquiteturas anteriores e suas implicações.
+
+Um exemplo é a ausência de instruções com \emph{delay slot}, uma técnica usada 
+em arquiteturas como a MIPS \citep{DSTL}, onde instruções logo após uma instrução
+de pulo são executadas antes do pulo ser executado. Esse tipo de decisão de design
+leva ao favorecimento de implementações que fazem uso de técnicas de \emph{pipeline},
+aumentando a complexidade de implementações \emph{in-order} da arquitetura.
+
+A arquitetura conta com o suporte a diversas linguagens de programação como \emph{Go}
+\citep{GOL}, \emph{C/C++} \citep{RVGCC} e linguagens que fazem uso da \emph{LLVM} 
+\citep{RVLLVM}, bem como o suporte de sistemas operacionais como o Debian \citep{RVDB}. 
+Um diferencial da arquitetura é a disponibilidade de núcleos de propriedade intelectual
+de semicondutores (IP do inglês \emph{intellectual property}) abertos para os mais 
+diversos casos de uso, como o \emph{PicoRV} \citep{PICO} para sistemas embarcados, 
+o \emph{Vortex} \citep{elsabbagh2020vortex} que usa núcleos RISC-V como aceleradores 
+gráficos ou o \emph{Xuantie-910} \citep{9138983} destinado ao uso em servidores.
+
+O desenvolvimento de IPs é feito usando uma linguagem de descrição de hardware 
+(HDL do inglês \emph{hardware description language}) sendo a \emph{Verilog} e a 
+\emph{VHDL} as mais bem suportadas na indústria. Com base na descrição é possível 
+simular o comportamento do IP ou sintetizar um configuração para uso em FPGAs ou 
+para fabricação de um \emph{chip}.
+
+Matriz de porta programáveis (FPGA do inglês \emph{field-programmable gate array}) é um 
+dispositivo constituído principalmente por blocos de lógica programável (CLB do inglês 
+\emph{configurable logic block}), interconectores e blocos de entrada e saída 
+(IOB do inglês \emph{input output block}) que são configurados para implementar um dado
+circuito lógico.
+
+A primeira FPGA, a \emph{XC2064}, foi introduzida em 1984 pela \emph{Xilinx} \citep{8392473}
+contendo 64 CBLs \emph{XCSP}. A \emph{7 series}, uma família de FPGAs lançada em 2010 pela \emph{Xilinx} 
+\citep{S7LN} conta com modelos com até 305 mil CBLs \citep{7CLB}, sendo as CLBs da \emph{7 series}
+capazes de representar circuitos mais complexos que as CLBs da \emph{XC2064}.
+
+O alto custo inicial para a fabricação de um \emph{chip} em relação a aquisição de FPGAs e o aumento dos
+circuitos que podem ser implementados nelas permitem que elas sejam usadas tanto no processo de 
+desenvolvimento de um circuito integrado (CI) quanto no produto final dependendo da escala do projeto
+através da adição de alguma memória que guarda a configuração desejada para ser carregada ao ligar a FPGA.
+
+O desenvolvimento de um processador envolve diversas etapas desde sua concepção até a sintetização para
+uso em uma FPGA ou produção de um \emph{chip}. Além da escolha da ISA, é necessário definir detalhes do ambiente 
+de execução que não são definidos pela arquitetura, escolha do design do processador, desenvolvimento da 
+descrição do hardware, uso de testes para verificar a descrição e análises para garantir o comportamento
+correto do circuito e outras atividades relacionadas a fabricação do \emph{chip} em si.
+
+O objetivo deste trabalho é registrar o processo de desenvolvimento de um processador usando a arquitetura 
+RISC-V desde a definição do ambiente até a síntese para uso em uma FPGA com um enfoque na etapa de verificação 
+através do testes com base na simulação dos componentes, um etapa que não tende a ser muito explorada em materiais 
+introdutórios sobre o desenvolvimento de processadores.
+
+O capítulo 2 aborda detalhes da notação e conceitos utilizados ao longo do texto. Seguido pelo capítulo 3 que apresenta uma descrição
+da parte de interesse da arquitetura. O captítulo 4 datalha as linguagens \emph{Verilog} e \emph{Objective-C}
+e a FPGA \emph{XC7A100T} utilizada no projeto. O capítulo 5 descreve o desenvolvimento e estruturação do processador.
+O capítulo 6 apresenta resultados da análise de desempenho. Por fim o capítulo 7 conclui os resultados e apresenta
+algumas reflexões sobre o desenvolvimento da CPU.
