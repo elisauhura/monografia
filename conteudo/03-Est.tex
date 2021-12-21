@@ -1,0 +1,153 @@
+%!TeX root=../tese.tex
+%("dica" para o editor de texto: este arquivo é parte de um documento maior)
+% para saber mais: https://tex.stackexchange.com/q/78101/183146
+
+%% ------------------------------------------------------------------------- %%
+\chapter{Projeto do processador e sistema de testes}
+\label{cap:3}
+
+\section{EEI}
+\label{sec:eei}
+
+Para o projeto foi escolhido desenvolver um processador com um \emph{hart} físico RV32ICZicsr e 
+uma interface de comunicação serial para processamento de informações. O ambiente de execução
+suporta acessos não alinhados na memória e disponibiliza os níveis de privilégio de máquina
+usuário.
+
+\subsection{Memória}
+\label{ssec:msr}
+
+O sistema é composto por um \emph{hart} com extremidade \emph{little-endian}. A memória possui 4
+regiões identificadas pelos símbolos sA, sB, sC e sD. Considerando $mem^{8'2^\text{XLEN}}$, a Tabela~\ref{tab:memregions} 
+descreve o intervalo
+de memória de cada região e sua funcionalidade. Regiões da memória não coberta por essas regiões
+sempre possuem o valor de 0 e o valor do $pc$ não pode apontar para elas.
+
+\begin{table}
+  \begin{tabular}{ |p{0.08\linewidth}|p{0.25\linewidth}|p{0.5\linewidth}| } 
+    \hline
+    Região & Intervalo & Descrição \\ \hline \hline
+    sA & mem[h280:h7F] & Região apenas de leitura utilizada para armazenar a BIOS do sistema. 
+    O $pc$ só pode apontar para essa região de memória caso ele esteja no nível de máquina. \\ \hline
+
+    sB & mem[hF00:F0F] & Região utilizada para mapeamento de dispositivos de entrada e saída. O $pc$ não pode apontar para essa região da memória
+    e ela só pode ser lida ou escrita pelo \emph{hart} caso ele esteja no nível de máquina. \\ \hline
+
+    sC & mem[h2000:h20FFF] & Região de memória com possibilidade de leitura e escrita caso o \emph{hart} esteja no nível de memória.
+    O $pc$ só pode apontar para essa região de memória caso ele esteja no nível de máquina. \\ \hline
+
+    sD & mem[h8000:h8EFFF] & Região de memória com possibilidade de leitura e escrita independente do nível do  \emph{hart} esteja no nível de máquina.
+    Destinada para armazenamento do programa que executa com privilégios. \\ \hline
+  \end{tabular}
+\caption{Tabela de regiões da memória disponibilizadas pelo \emph{EEI} \label{tab:memregions}}
+\end{table}
+
+A memória da região sB é utilizada para mapear a interface serial, o temporizador de máquina, o sistema de bancos de memória e leitura dos pinos de entrada e
+saída.
+
+\subsubsection{Interface Serial}
+\label{ssec:serialio}
+
+A interface serial é utilizada para comunicação assíncrona com dispositivos externos. Sua comunicação é feita através do envio e recebimento de \emph{bytes}
+com uma velocidade de  de 9600 Baud utilizando o protocolo \emph{universal asynchronous receiver-transmitter} (UART) sem \emph{bits} de paridade e 1 
+\emph{bit} de parada. A comunicação utiliza filas de 8 bytes para entrada e saída, permitindo que a comunicação seja processada em blocos de 8 bytes.
+A interface é mapeada em sB[3:0] onde:
+\begin{itemize}
+  \item sB[0] vale 1 caso existam \emph{bytes} a serem lidos, 3 caso a fila de leitura esteja cheia e 0 caso não tenham bytes disponíveis para a leitura.
+  \item sB[1] vale 1 caso existam \emph{bytes} a fila de envio tenha espaço, 3 caso a fila de vazio esteja vazia e 0 caso ela esteja cheia.
+  \item sB[2] quando lido retorna o valor da cabeça da fila de leitura e remove o valor da fila.
+  \item sB[3] quando escrito adiciona o valor na fila de envio.
+\end{itemize}
+
+A interface serial suporta apenas leituras e escrita através das instruções LB e SB.
+
+\subsubsection{Temporizador}
+\label{ssec:timerm}
+
+O intervalor sb[11:4] é utilizado para armazenar o temporizador de máquina. Caso o valor dele seja menor ou igual ao do contador de máquina
+é emitida uma interrupção de temporizador de máquina.
+
+\subsubsection{Sistema de bancos}
+\label{ssec:bancos}
+
+A memória da região sD utiliza um sistema de bancos onde trechos de memória de 7800 \emph{bytes} constituem um banco de memória. sB[14] só pode ser lido 
+e guarda a quantidade de bancos disponíveis e sempre é um valor maior ou igual a 2. 
+sB[12] indica o banco que é mapeado em sD[77FF:0] e sB[13] indica o banco que é
+mapeado em sD[EFFF:7800]. Os bancos são indexados a parir do zero, assim os valores de sB[12] e sB[13] devem ser sempre menor que sB[14] e a tentiva de
+escrita de um valor inválido é ignorada. Além disso sB[12] e sB[13] podem apontar para o mesmo banco.
+
+\subsubsection{Pinos de entrada e saída}
+\label{ssec:gpio}
+
+O byte sB[15] é utilizado para mapear pinos de entrada e saída, onde sB[15][7:4] é mapeado em pinos de saída e sB[15][3:0] é mapeado em pinos de entrada.
+O funcionamento desses pinos é descrito na Seção~\ref{sec:sin}.
+
+\subsection{Inicialização}
+\label{ssec:init}
+
+Ao iniciar o \emph{hart} pula para a posição h280 e começa a execução do programa da BIOS em modo de máquina com interrupções desativadas.
+O valor do temporizador de máquina é alterado pra hFFFFFFFFFFFFFFFF e sB[12] e sB[13] valem 0.
+
+\section{Design do Processador}
+\label{sec:ddp}
+
+Para o desenvolvimento do processador foi escolhido criar uma microarquitetura \emph{in-order muticycle} como a descrita por \cite{harris2021digital}.
+O processador implementa uma máquina de estados 
+
+\begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \node[state, initial] (q1) {Inicialização};
+  \end{tikzpicture}
+  \caption{Máquina de estados do processador}\label{fig:graficos}
+\end{figure}
+
+\subsection{Unidade de controle}
+\label{ssec:udc}
+
+\subsection{Unidade de decodificação}
+\label{ssec:decode}
+
+\subsection{Unidade de processamento aritimético}
+\label{ssec:upa}
+
+\subsection{Arquivo de registro}
+\label{ssec:memfile}
+
+\subsection{Interface de memória}
+\label{ssec:memint}
+
+\subsection{Interface serial}
+\label{ssec:serial}
+
+\section{Estrutura do Projeto}
+\label{sec:edp}
+
+\subsection{Módulos \emph{Verilog}}
+\label{ssec:mverilog}
+
+\subsection{Interface de módulos}
+\label{ssec:imdl}
+
+\subsection{Classes de apoio}
+\label{ssec:apoio}
+
+\section{Sistema de testes}
+\label{sec:sdt}
+
+\subsection{Representação de um módulo}
+\label{sec:rdm}
+
+\subsection{\emph{Script} de testes}
+\label{ssec:script}
+
+\subsection{\emph{Testbench}}
+\label{ssec:bench}
+
+\subsection{Execução de testes e integração contínua}
+\label{sec:edt}
+
+\section{Sintetização}
+\label{sec:sin}
+
+

@@ -1,0 +1,1384 @@
+%!TeX root=../tese.tex
+%("dica" para o editor de texto: este arquivo é parte de um documento maior)
+% para saber mais: https://tex.stackexchange.com/q/78101/183146
+
+\chapter{Desenvolvimento}
+\label{cap:2}
+
+%% ------------------------------------------------------------------------- %%
+\section{Notação e conceitos}
+\label{sec:not}
+
+  Esta seção apresenta definições e notações que serão usadas ao longo do texto.
+  A notação se faz necessária para garantir uma interpretação clara da descrição do
+  comportamento de instruções (vetores de \emph{bits})
+   e de detalhes de implementação uma vez que valores 
+  podem ser tratados como número e uma sequência de bits ao mesmo tempo, gerando
+  confusão.
+
+  Os conceitos apresentados possuem definições externas diferentes da apresentada 
+  neste captítulo pois foram simplificadas para o contexto mais restrito do texto.
+
+\subsection{Bases}
+\label{sec:bases}
+
+  Números prefixados pela letra \emph{b}, \emph{o}, \emph{d} e \emph{h} devem ser 
+  interpretados nas bases $2$, $8$, $10$ e $16$ respectivamente. A ausência de um 
+  prefixo indica que o número deve ser interpretado como estando na base 10. Assim 
+  $ \text{b}10 = 2 $ e $ \text{hFF} = 255 $. 
+  
+  O uso de \emph{\_} entre dígitos de um número é usado para separar regiões
+  e deve ser ignorado na interpretação do número. Por exemplo, $ 10\_780 = 10780 $.
+
+  A notação usual usando um \emph{radix} como em $10110_2$ não foi utilizada para 
+  que não colida com a notação de utilizada para valores de uma sequência onde o valor
+  subscrito é utilizado para demarcar a posição na sequência.
+
+\subsection{Bits}
+\label{sec:bit}
+
+  O \emph{bit} é a menor unidade de informação utilizada na computação, podendo assumir 
+  dois valores ou estados: $0$ e $1$. Esses valores também são utilizados para descrever 
+  os possíveis estados de um sinal em um circuito lógico.
+
+\subsection{Vetores}
+\label{sec:vec}
+
+  Um vetor é uma sequência de elementos que possuem o mesmo número de estados possíveis, 
+  onde seus valores podem ser acessados com base na sua posição no vetor. 
+  O primeiro elemento de um vetor começa na posição $0$, o segundo na posição $1$
+  e assim por diante.
+
+  O tamanho de um vetor representa a quantidade de elementos que um vetor contém e ele 
+  é maior que $0$. Uma posição é considerada válida se ela for maior ou igual a $0$ e 
+  menor que o tamanho do vetor.
+
+  Tanto vetores quanto \emph{bits} são considerados elementos. O tipo de um elemento 
+  representa o número de estados possíveis dele e o tipo de um vetor é dado pelo tipo 
+  dos elementos na sua sequência elevado pelo tamanho do vetor.
+
+  Um vetor de bits $A$ de tamanho $B$ será representado por $A^{1'B}$ ou $A^{'B}$ e 
+  possui $2^B$ possíveis estados. Um vetor $C$ de vetores de bits $A^{'B}$ de tamanho
+  $D$ é representado por $C^{B'D}$ e possui $2^{B \cdot D}$ possíveis estados. 
+  O sobrescrito, chamado de formato do vetor, pode ser omitido caso não seja importante
+  ou já conhecido.
+
+  O valor de um elemento localizado na posição a válida de um vetor $A$ é representado 
+  pela notação $A[a]$. O vetor $A$ formado pelos elementos $a_0, a_1, a_2,..., a_n,$ 
+  de mesmo tipo é representado por ${a_0, a_1, a_2,..., a_n}$ onde $A[i] = a_i$.
+
+  Dado dois vetores quaisquer $A^{X'I}$ e $B^{X'J}$, $A + B$ representa um vetor $C$ 
+  de tamanho $I + J$ tal que $C[i] = B[i]$ se $i < J$ e $C[i] = A[i-J]$ caso contrário.
+  Note que $ A + B \neq B + A $.
+
+  Dado um vetor $A$ qualquer, $A[m\text{:}n]$ tal que $m \geq n$ e ambos sejam posições
+  válidas é o vetor dado por $\sum_{a = n}^m{\{A[a]\}}$, onde $[m\text{:}n]$ é denominado 
+  intervalo.
+
+  Dado intervalos $a_0, a_1, a_2,..., a_n$ de um mesmo vetor $A$, $A[a_0|a_1|a_2|...|a_n] 
+  = A[a_0] + A[a_1] + A[a_2] + … + A[a_n]$.
+
+  O tamanho de um vetor $A$ é denotado por $\#A$, o tipo de um de seus elemento é denotado 
+  por $\#[A]$ e o seu tipo é denotado por $\#(A)$.
+
+  O valor de um vetor $A$ é denotado por $|A|$ e é dado pela fórmula $\sum_{i =0}^{\#A-1}
+  |A[i]| \cdot \#[A]^i$. O valor de um bit é o seu valor, assim $|0| = 0$ e $|1| = 1$.
+
+  O valor linha de um vetor $A$ é denotado por $|'A|$ e igual à $\sum_{i =0}^{\#A-1}
+  |'A[\#A -i -1]| \cdot \#[A]^i$ se $\#[A] > 2$ e  $|A|$ caso contrário.
+
+  Caso um número $a$ seja usado no lugar de um vetor de bits de formato conhecido, 
+  ele representa o vetor cujo valor é igual a $a$. Por exemplo, $35^{'7} = \{1,1,0,0,0,1,0\}
+  = \text{b}10\_0011^{'7}$.
+
+  Um \emph{byte} é um vetor de 8 \emph{bits}.
+
+\subsection{Extremidade ou endianness}
+\label{sec:endianness}
+
+  Extremidade ou \emph{endianness} se refere a ordem utilizada para converter ou comparar 
+  vetores de mesmo tipo, porém formatos diferentes. Existem dois tipos de extermidade:
+  \emph{little-endian} e \emph{big-endian}.
+
+  Dado dois vetores $A^{I'J}$ e $B^{M'N}$ onde $\#(A) = \#(B)$. $B$ é dito \emph{little-endian} 
+  equivalente a $A$ se e somente $|A| = |B|$ e $B$ é dito \emph{big-endian} equivalente a $A$
+  se e somente $|'A| = |'B|$.
+
+  Um exemplo prático para entender o conceito de extremidade é a diferença entre os formatos
+  de um valor armazenado na memória RAM de um computador e o mesmo valor armazenado no registrador
+  do processador.
+
+  Considere o vetor $A^{'32}$ cujo valor é $\text{hAFBEEF}$ como o registrador e o vetor $B^{8'4}$
+  como a região de memória em que o valor do registrador é armazenado. Caso o processador seja 
+  \emph{little-endian},  $B^{8'4} = \{ \text{hEF}, \text{hBE}, \text{hAFB}, \text{h}00 \}$. 
+  E caso a ordem utilizada seja big-endian,  $B^{8'4} = \{ h00, hAF, hBE, hEF \}$.
+
+  Dado um vetor qualquer $A^{M'N}$ e uma endianness $E$ conhecida. $\alpha A$ é um vetor de 
+  $M \cdot N$ \emph{bits} $E$ equivalente à $A$.
+
+\subsection{Palavra}
+\label{sec:word}
+
+  O termo palavra é usada para designar o tamanho natural dos vetores em um processador ou arquitetura. 
+  A palavra costuma determinar o tamanho dos registradores e outros aspectos do processador. 
+  Em RISC-V o tamanho da palavra também é designado por XLEN.
+
+\subsection{Signed e unsigned}
+\label{sec:seu}
+
+  O valor de um vetor de \emph{bits} é sempre um número positivo, porém em certos casos é desejado
+  uma representação em que o valor do vetor possa assumir um valor negativo. Desse modo os vetores
+  podem ser tratados como \emph{signed} e \emph{unsigned} cuja tradução seria com e sem sinal.
+
+  Quando um vetor de bits $A$ é tratado como \emph(unsigned), ele pode representar valores de $0$ à
+  $\#(A) - 1$. E quando ele é tratado como \emph{signed}, ele pode assumir valores de $-\#(A)/2$ à 
+  $\#(A)/2 - 1$. O valor \emph{signed} do vetor, denotado por $|^+A|$, é igual a $(\sum_{i =0}^{\#A-2}
+  A[i]\cdot 2^i)-2^{\#A -1}\cdot A[\#A-1]$. No caso de um vetor de vetores de \emph{bits} $B$, 
+  $|^+B| = |^+\alpha B|$.
+
+  Um detalhe ao lidar com valores \emph{signed} é que ao definir um vetor de maior tamanho cujo valor 
+  \emph{signed} é igual ao de um vetor de menor tamanho, para preservar o valor, os \emph{bits} adicionados 
+  devem ser iguais ao valor do \emph{bit} na maior posição do vetor de menor valor. Esse processo é 
+  chamado de \emph{sign-extension} ou extensão com sinal enquanto a \emph{unsigned-extension} ou extensão
+  sem sinal estende o vetor adicionando \emph{bits} com valor $0$ nas posições superiores.
+
+%% ------------------------------------------------------------------------- %%
+\newpage
+\section{Arquitetura RISC-V}
+\label{cap:isa}
+  
+  Apesar de parte do nome da ISA conter RISC, um acrônimo para \emph{reduced 
+  instruction set computer} que significa computador com conjunto reduzido de instruções, 
+  ela não impede que um processador que implementa a arquitetura possua um grande número 
+  de instruções. Ao invés disso, a arquitetura usa uma estratégia de conjunto base de 
+  instruções e extensões. Essa estrégia permite que implementações da ISA sejam tão complexas
+  quanto seja necessário e ISA seja utilizada em diversos cenários da indústria e da academia.
+  
+  As especificações oficiais são organizadas e disponibilizadas de forma gratuita 
+  no site da \emph{RISC-V International}. Cada parte da especificação possui sua própria versão 
+  e status de trabalho. Dentre os possíveis status, uma parte da especificação pode 
+  estar em \emph{draft} (esboço), onde ainda é possível ocorrer grandes alterações 
+  em futuras versões, \emph{frozen} (congelada), onde não se espera grandes alterações 
+  em futuras versões, ou \emph{ratified} (ratificada), onde não é esperado alterações até
+  uma possível grande revisão.
+  
+  Toda implementação da ISA deve oferecer um dos conjuntos base e um subconjunto de 
+  extensões (oficiais ou não oficiais). Isso permite que implementações para uso em 
+  microcontroladores não precisem suportar operações com ponto flutuante ou execução 
+  privilegiada que aumentariam o custo do chip. Enquanto ambas funcionalidades podem
+  ser suportadas em implementações para uso em servidores, onde estas instruções são
+  desejadas.
+  
+\subsection{Harts e EEI}
+\label{sec:harts}
+
+  A arquitetura não define todos os detalhes necessários para uma implementação funcional 
+  de um processador. Questões como o mapeamento de regiões da memória para dispositivos 
+  de entrada e saída, estado inicial do processador ao ser inicializado e afins são 
+  definidas pela \emph{execution environment interface} (EEI) ou interface do ambiente de execução. 
+  Uma dada EEI possui um ou mais \emph{RISC-V hardware threads} ou \emph{harts}.
+
+  Da perspectiva do programa sendo executado em um ambiente de execução, um \emph{hart}
+  é apenas um recurso que automaticamente carrega e executa instruções RISC-V \citep{RVS1}.
+  
+  Mesmo contendo \emph{hardware} no nome, a ideia de um \emph{hart} não exige uma implementação física,
+  podendo ser, por exemplo, implementado por emulação via software ou multiplexado, onde vários
+  \emph{harts} a nível de usuário de um sistema operacional são mapeados temporariamente em 
+  \emph{harts} físicos para avançarem seu estado.
+
+\subsection{Formato das instruções}
+\label{sec:instfmt}
+
+  Apesar da ISA poder ser implementada usando tanto modos \emph{big-endian} quanto \emph{little-endian},
+  as instruções devem ser armazenadas na memória em palavras de 16 \emph{bits little-endian}.
+  Ela suporta instruções de tamanhos múltiplos de 16 \emph{bits}, sendo 32 \emph{bits} o tamanho das 
+  instruções padrões, exceto pelas instruções da extensão de instruções comprimidas que são de 16 \emph{bits}.
+  Instruções podem ser interpretadas como vetores de \emph{bits}.
+
+  Uma instrução $a$ é considerada de 16 \emph{bits} se e somente se $a[1\text{:}0]$ for diferente de $\text{b}11$.
+  Uma instrução $b$ é considerada de 32 \emph{bits} se e somente se $b[1\text{:}0]$for igual a $\text{b}11$ 
+  e $b[4\text{:}2]$ não for igual a $\text{b}111$. Casos em que $b[4\text{:}2]$ é igual a $\text{b}111$ são
+  reservados para instruções maiores que não serão cobertas neste texto.
+
+  Apesar do padrão definir formatos para instruções até 176 \emph{bits} e ter espaço reservado para instruções
+  maiores, a definição delas ainda não foi congelada e pode sofrer alteração no futuro 
+  (as definições para 16 e 32 \emph{bits} fazem parte de padrões já retificados).
+  O suporte a instruções longas é importante para permitir que pesquisas e produtos que façam de 
+  \emph{very long word instructions} \citep{VLWI} possam ser implementados usando RISC-V.
+  
+  As instruções são divididas em formatos que definem como cada parte das instruções devem ser interpretadas. 
+  Com base no tipo, a instrução é subdividida em campos, como $rd$ para representar o registrador de destino.
+  A ISA busca preservar a posição dos campos entre instruções, assim o campo $rd$ fica na mesma região mesmo
+  em instrução com formatos diferentes. Simplificando a decodificação da instrução.
+
+  As instruções base usam 6 formatos diferentes de instruções de 32 \emph{bits} identificados pelas letras 
+  R, I, S, B, U e J. Todos possuem o campo $opcode$ de 7 \emph{bits} localizado no intervalo [6:0] 
+  da instrução usado para diferenciar o tipo da instrução. 
+  A Tabela~\ref{tab:if32} detalha os campos possíveis e a Tabela~\ref{tab:if32f} detalha os campos presentes em cada formato.
+
+  Caso não haja suporte para instruções cujo tamanho seja um múltiplo ímpar de 16 \emph{bits}, as instruções 
+  devem ser alinhadas em vetores de 32 \emph{bits}. Caso haja, as instruções devem ser alinhadas em 
+  vetores de 16 \emph{bits}. Considerando a memória um vetor de 8 \emph{bits}, se apenas instruções de 
+  32 \emph{bits} forem suportadas, o endereço da instrução sempre será um múltiplo de 4 e sempre será um 
+  múltiplo de 2 caso instruções de 16 \emph{bits} sejam suportadas.
+
+  
+  \begin{table}
+  \begin{tabular}{ |p{0.2\linewidth}|p{0.08\linewidth}|p{0.12\linewidth}|p{0.58\linewidth}| } 
+    \hline
+    Campo & {\#} Bits & Intervalo & Definição \\ \hline \hline
+    $opcode$ & 7 & [6:0] & Determina a instrução ou grupo da instrução e o tipo da instrução. \\ \hline
+    $rd$ & 5 & [11:7] & Determina o registrador de destino de uma operação \\ \hline
+    $rs1$ & 5 & [19:15] & Determina o registrador usado como primeiro argumento de uma operação. \\ \hline
+    $rs2$ & 5 & [24:20] & Determina o registrador usado como segundo argumento de uma operação. \\ \hline
+    $funct3$ & 3 & [14:12] & \multirow{2}{1\linewidth}{Especifica a operação que será realizada pela instrução.}\\
+    $funct7$ & 7 & [31:25] & \\ \hline
+    $imm[11\text{:}0]$ & 12 & [31:20] & 
+    \multirow{7}{1.0\linewidth}{Definem valores de uma região de um valor imediato do tamanho da palavra 
+    (XLEN) do conjunto base. Os \emph{bits} não definidos em posições maiores que a maior posição com 
+    valor definido na instrução possuem o mesmo valor que o \emph{bit} na maior posição definida. 
+    \emph{Bits} não definidos em posições menores que o maior posição com valor definido na instrução 
+    possuem o valor de 0.} \\
+    $imm[4\text{:}0]$ & 5 & [11:7] & \\
+    $imm[11\text{:}5]$ & 7 & [31:25] & \\
+    $imm[4\text{:}1|11\text{:}11]$ & 5 & [11:7] & \\
+    $imm[12\text{:}12|10\text{:}5]$ & 7 & [31:25] & \\
+    $imm[31\text{:}12]$ & 20 & [31:12] & \\
+    $imm[20\text{:}20|10\text{:}1|$ $11\text{:}11|19\text{:}19|12\text{:}12]$ & 20 & [31:12] & \\
+    \hline 
+  
+  \end{tabular}
+  \caption{Tabela de campos para instruções de 32 bits\label{tab:if32}}
+  \end{table}
+
+  \begin{table}
+    \begin{tabular}{ |p{0.1\linewidth}|p{0.45\linewidth}|p{0.45\linewidth}| } 
+      \hline
+      Formato & Campos & Função \\ \hline \hline
+      R & $funct7+rs2+rs1+funct3+rd+opcode$ & R$(opcode, funct3, funct7)(rd, rs1, rs2)$ \\ \hline
+      I & $imm[11\text{:}0]+rs1+funct3+rd+opcode$ & I$(opcode, funct3)(rd, rs1, imm)$ \\ \hline
+      S & $imm[11\text{:}5]+rs2+rs1+funct3+imm[4\text{:}0]+opcode$ & S$(opcode, funct3)(rs1, rs2, imm)$ \\ \hline
+      B & $imm[12\text{:}12|10\text{:}5]+rs2+rs1+funct3+imm[4\text{:}1|11\text{:}11]+opcode$ & B$(opcode, funct3)(rs1, rs2, imm)$ \\ \hline
+      U & $imm[31\text{:}12]+rd+opcode$ & U$(opcode)(rd, imm)$ \\ \hline
+      J & $imm[20\text{:}20|10\text{:}1|11\text{:}11|19\text{:}19|12\text{:}12]+rd+opcode$ & J$(opcode)(rd, imm)$ \\ \hline 
+    \end{tabular}
+  \caption{Tabela de formatos para instruções de 32 bits\label{tab:if32f}}
+  \end{table}
+
+  A coluna de função na Tabela~\ref{tab:if32f} é utilizada para relacionar descrições de instruções com a 
+  sequência de \emph{bits} que ela representa. Os valores entre o primeiro par de parênteses são pré definidos 
+  pela instrução e os valores do segundo par de parênteses são argumentos da instrução. Por exemplo, considere 
+  a instrução ADDI, que soma o valor imediato com o valor contido no registrador $rs1$ e guarda o valor no 
+  registrador $rd$, e é descrita por I$(19,0)(rd, rs1, imm)$, que indica que o campo de $opcode$ possui o 
+  valor de $19$ e o campo $funct3$ possui o valor de $0$ enquanto os campos $rd$, $rs1$ e $imm$ são argumentos 
+  da instrução (onde $imm$ representa o valor do immediato, cuja a instrução utiliza intervalos dele).
+
+  Supondo valores para $rd$, $rs1$ e $imm$, $\text{ADDI}(2, 3, 10) = 
+  10^{'32}[11\text{:}0] + 3^{'5} + 0^{'3} + 2^{'5} + 19^{'7} = \text{b}000000001010\_00011\_000\_00010\_0010011^{'32}$.
+
+  Apesar do imediato ser tratado como um vetor de 32 \emph{bits}, as instruções só podem codificar 
+  alguns dos possíveis valores que o imediato pode assumir. Por exemplo, imediatos cujo valor seja ímpar não 
+  podem ser representados em instruções que utilizam o formato B.
+
+\subsection{Formato das instruções comprimidas}
+\label{sec:instCfmt}
+
+  As instruções comprimidas fazem uso de instruções de 16 \emph{bits} e adicionam 9 formatos de instruções.
+  A Tabela~\ref{tab:if16} detalha os campos possíveis e a Tabela~\ref{tab:if16f} detalha os campos 
+  presentes em cada formato.
+
+  Elas fazem parte da extensão C e podem ser mapeadas em instruções equivalentes de 32 \emph{bits}. Devido ao 
+  número de \emph{bits} reduzido, alguns formatos fazem uso de campos que apontam para registradores com uma 
+  apóstrofe no final que ocupam 3 \emph{bits} ao invés de 5. O valor de um campo $rx$ equivalente a um campo $rx'$
+  é dado por $rx^{'5} = \text{b}01^{'2} + rx'^{'3}$.
+
+
+  \begin{table}
+    \begin{tabular}{ |p{0.2\linewidth}|p{0.08\linewidth}|p{0.12\linewidth}|p{0.5\linewidth}| } 
+      \hline
+      Campo & {\#} Bits & Intervalo & Definição \\ \hline \hline
+      $op$ & 2 & $[1\text{:}0]$ & Determina a instrução ou grupo da instrução e o tipo da instrução. \\ \hline
+      $rs2$ & 5 & $[6\text{:}2]$ & 
+      \multirow{6}{1.0\linewidth}{Funcionam de forma equivalente aos campos para instruções de 32 \emph{bits}. 
+      Campos $rd$/$rs1$ implicam que o mesmo registrador pode ser utilizado como argumento e ou destino.}  \\
+      $rd\text{/}rs1$ & 5 & $[11\text{:}7]$ & \\
+      $rd'$ & 3 & $[4\text{:}2]$ & \\
+      $rs2'$ & 3 & $[4\text{:}2]$ & \\
+      $rs1'$ & 3 & $[9\text{:}7]$ & \\
+      $rd'\text{/}rs1'$ & 3 & $[9\text{:}7]$ & \\ \hline
+      $funct2$ & 2 & $[5\text{:}6]$ &  
+      \multirow{4}{1.0\linewidth}{Especifica a operação que será realizada pela instrução.}\\
+      $funct3$ & 3 & $[15\text{:}13]$ & \\
+      $funct4$ & 4 & $[15\text{:}12]$ & \\
+      $funct6$ & 6 & $[15\text{:}10]$ & \\ \hline
+      $immA$ & 5 & $[6\text{:}2]$ & 
+      \multirow{4}{1.0\linewidth}{Definem regiões de um valor imediato de XLEN bits porém diferente dos campos $imm$ de
+        instruções de 32 \emph{bits}, a região representada varia de acordo com a instrução
+         e não com o formato.} \\ 
+      $immB$ & 1 & $[12\text{:}12]$ & \\
+      $immC$ & 6 & $[12\text{:}7]$ & \\
+      $immD$ & 8 & $[12\text{:}5]$ & \\
+      $immE$ & 2 & $[6\text{:}5]$ & \\
+      $immF$ & 3 & $[12\text{:}10]$ & \\
+      $immG$ & 11 & $[12\text{:}2]$ & \\ \hline
+    \end{tabular}
+  
+    \caption{Tabela de campos para instruções de 16 bits \label{tab:if16}}
+    \end{table}
+  
+    \begin{table}
+      \begin{tabular}{ |p{0.1\linewidth}|p{0.45\linewidth}|p{0.45\linewidth}| } 
+        \hline
+        Formato & Campos & Função \\ \hline \hline
+        CR & $funct4+rd/rs1+rs2+op$ & CR$(op, funct4)(rd/rs1, rs2)$ \\ \hline
+        CI & $funct3+immB+rd/rs1+immA+op$ & CI$(op, funct3)(rd/rs1, immA, immB)$ \\ \hline
+        CSS & $funct3+immC+rs2+op$ & CSS$(op, funct3)(rs2, immC)$ \\ \hline
+        CIW & $funct3+immD+rd'+op$ & CIW$(op, funct3)(rd', immD)$ \\ \hline
+        CL & $funct3+immF+rs1'+immE+rd'+op$ & CL$(op, funct3)(rd', rs1', immE, immF)$ \\ \hline
+        CS & $funct3+immF+rs1'+immE+rs2'+op$ & CS$(op, funct3)(rs1', rs2', immE, immF)$ \\ \hline
+        CA & $funct6+rd'/rs1'+funct2+rs2'+op$ & CA$(op, funct2, funct6)(rd'/rs1', rs2')$ \\ \hline
+        CB & $funct3+immF+rs1'+immA+op$ & CB$(op, funct3)(rs1', immA, immF)$ \\ \hline
+        CJ & $funct3+immG+op$ & CJ$(op, funct3)(immG)$ \\ \hline
+      \end{tabular}
+    \caption{Tabela de formatos para instruções de 16 bits \label{tab:if16f}}
+    \end{table}
+
+    As funções descritas para os formatos comprimidos não possuem informação o suficiente para definir 
+    como os intervalos do valor imediato são registrados na instrução. Assim, a descrição das funções
+    deixa explícito o mapeamento através de comentários após a função. 
+    Por exemplo a instrução C.LI$(rd, imm^{'6})$ é descrita por CI$(1, 2)(rd, imm[4\text{:}0], imm[5\text{:}5])$
+    onde $rd$ é diferente de $0$.
+    C.LI altera o valor contido no registrador $rd$ para ser igual ao valor do $imm$.
+
+    Supondo valores para $rd$ e $imm$, C.LI$(2, 27) = 2^{'3} + 27^{'32}[5\text{:}5] +
+    2^{'5} + 27^{'32}[4\text{:}0] + 2^{'2} = \text{b}010\_0\_00010\_11011\_10^{'16}$.
+
+\subsection{Processamento da instrução}
+\label{sec:nstate}
+
+    Instruções descrevem alterações no estado de um \emph{hart}, sem especificar detalhadamente quando 
+    e como o estado é alterado. Dado uma sequência de instruções, o estado \emph{real} do \emph{hart} 
+    entre execuções de instruções não precisa refletir o especificado pelas instruções, nem mesmo 
+    força que as instruções sejam executadas uma 
+    após a outra. Permitindo que diferentes técnicas sejam utilizadas para implementar um processador RISC-V.
+
+    A descrição de uma instrução de soma como ``o valor do registardor $A$ passa a ser igual a soma do 
+    valor do resgitador $B$ com o valor do resgistrados $C$", não implica necessariamente que após sua execução
+    o valor do registrador $A$ seja o da soma e sim que caso o seu valor seja observado por alguma outra execução de
+    instrução sem que seu valor tenha sido alterado por instruções intermediários, o valor observado deve refletir a soma.
+
+\subsection{Instruções base}
+\label{sec:instBase}
+
+    Os conjuntos de instruções base incluem instruções relacionadas à leitura e à escrita de 
+    inteiros, computação com inteiros, transferência de controle, ordenação de memória e 
+    chamadas para o ambiente de execução.
+
+    Atualmente a RISC-V engloba 4 conjuntos base, 3 conjuntos com 32 registradores, RV32I, 
+    RV64I e RV128I com palavras de 32, 64 e 128 \emph{bits} respectivamente e um conjunto de 
+    16 registradores com palavras de 32 \emph{bits} RV32E. Os registradores são identificados 
+    por $x0$ à $x31$ (o RV32E só possui até o registrador $x15$).
+
+    A maioria das instruções são compartilhadas entre os conjuntos base, com exceção das 
+    instruções relacionadas a palavras de 64 \emph{bits} que só estão disponíveis nos 
+    conjuntos RV64I e RV128I e as instruções relacionadas a palavras de 128 \emph{bits} 
+    que só estão disponíveis no conjunto RV128I.
+
+    O RV32E é similar ao RV32I exceto pelo fato que as instruções que almejam 
+    registradores que não existem no RV32E passam a ser consideradas livres para uso 
+    por extensões.
+
+    Como o núcleo implementado usa apenas o conjunto RV32I, não serão apresentados 
+    detalhes dos outros conjuntos base, porém é interessante notar que a arquitetura 
+    provê mecanismos para que um mesmo hart suporte mais de um conjunto base e alterne 
+    entre eles \citep{RVS2}.
+
+\subsubsection{Registradores}
+\label{ssec:reg}
+
+    O XLEN define o tamanho dos registradores. A arquitetura define que cada implementação 
+    deve possuir 32 registradores de XLEN \emph{bits} onde $x0$ sempre possui o valor 0 e descarta
+    qualquer escrita e XLEN é o tamanho definido para os registradores.
+    Além dos registradores de uso geral, existe um registrador de XLEN 
+    \emph{bits} denominado \emph{pc} (do inglês \emph{program counter} ou contador de programa) 
+    que aponta para o endereço de memória em que a instrução que está sendo executada se localiza.
+
+\subsubsection{Memória e instruções de leitura e escrita}
+\label{ssec:rw}
+
+    Para um \emph{hart}, a memória é tratada como um único espaço circular de $2^{\text{XLEN}}$ bytes.
+    O modelo padrão de consistência de memória é o \emph{RISC-V Weak Memory Ordering} (RVWMO) \citep{RVS1}
+    e o \emph{endianness} é definido pela EEI.
+
+    Uma leitura de 4 \emph{bytes} a partir de $2^{\text{XLEN}} - 2$ equivale ao intervalo 
+    $[2^{\text{XLEN}}+1\text{:}2^{\text{XLEN}} - 2]$, cuja as posições são computadas considerando seu valor módulo
+    $2^{\text{XLEN}}$. Considerando $mem^{8'2^{\text{XLEN}}}$ o vetor da memória, 
+    $mem[{2^{\text{XLEN}}+1\text{:}2^{\text{XLEN}} - 2}] = {mem[2^{\text{XLEN}} - 2], mem[2^{\text{XLEN}} - 1], mem[0], mem[1]}$.
+
+    A arquitetura usa um modelo de \emph{load-store}, onde valores podem ser lidos ou escritos entre 
+    registradores e a memória, porém operações como soma ou multiplicação utilizam apenas valores contidos 
+    nos registradores.
+
+    O RV32I suporta operações de leitura e escrita de valores de 8, 16 e 32 \emph{bits}. Por padrão, os valores 
+    são tratados como \emph{signed} e operações de leitura de 8 e 16 \emph{bits} possuem variantes \emph{unsigned}
+    que não realizam \emph{signed-extension} ao definir o valor do registrador.
+
+    As instruções de leitura utilizam o formato I onde o valor contido no registrador $rs1$ é somado com o valor
+    do imediato para computar um endereço que é utilizado para ler uma quantidade de \emph{bytes} a serem escritos
+    no registrador $rd$.
+
+    As instruções de escrita utilizam o formato S onde o valor contido no registrador $rs1$ é somado com o valor 
+    do imediato para computar um endereço utilizado para alterar o valor de certos \emph{bytes} da memória com 
+    base no valor contido no registrador $rs2$.
+
+    Considerando $mem^{8'2^\text{XLEN}}$ o vetor da memória e $reg^{32'32}$ o vetor de registradores, a
+    Tabela~\ref{tab:rw32} descreve as instruções de leitura e escrita.
+
+    \begin{table}
+      \begin{tabular}{ |p{0.13\linewidth}||p{0.14\linewidth}|p{0.24\linewidth}|p{0.40\linewidth}| } 
+        \hline
+        Mnemônico & Argumentos & Definição & Descrição\\ \hline \hline
+
+  LB & $rd, rs1, imm$ & I$(3, 0)(rd, rs1, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $|^+reg[|rd|]|$ passa a ser igual a $|^+ \alpha mem[a\text{:}a]|$ \\ \hline
+  LH & $rd, rs1, imm$ & I$(3, 1)(rd, rs1, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $|^+reg[|rd|]|$ passa a ser igual a $|^+ \alpha mem[a+1\text{:}a]|$ \\ \hline
+  LW & $rd, rs1, imm$ & I$(3, 2)(rd, rs1, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $|^+reg[|rd|]|$ passa a ser igual a $|^+ \alpha mem[a+3\text{:}a]|$ \\ \hline
+  LBU & $rd, rs1, imm$ & I$(3, 4)(rd, rs1, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $|reg[|rd|]|$ passa a ser igual a $|\alpha mem[a\text{:}a]|$  \\ \hline
+  LHU & $rd, rs1, imm$ & I$(3, 5)(rd, rs1, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $|reg[|rd|]|$ passa a ser igual a $|\alpha mem[a+1\text{:}a]|$ \\ \hline
+  SB & $rs1, rs2, imm$ & S$(43, 0)(rs1, rs2, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $\alpha mem[a\text{:}a]$ passa a ser igual a $reg[|rs2|][7:0]$ \\ \hline
+  SH & $rs1, rs2, imm$ & S$(43, 1)(rs1, rs2, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $\alpha mem[a+1\text{:}a]$ passa a ser igual a $reg[|rs2|][15:0]$\\ \hline
+  SW & $rs1, rs2, imm$ & S$(43, 2)(rs1, rs2, imm)$ & Considerando o endereço $a = |reg[|rs1|]| + |imm|$, $\alpha mem[a+3\text{:}a]$ passa a ser igual a $reg[|rs2|]$\\ \hline
+
+      \end{tabular}
+    \caption{Tabela de instruções de leitura e escrita \label{tab:rw32}}
+    \end{table}
+
+\subsubsection{Instruções de operação entre registradores e ou imediatos}
+\label{ssec:regimm}
+
+    O conjunto base de instruções permite realizar uma gama de operações entre vetores de \emph{bits}. As operações podem ser
+    computadas utilizando o valor de dois registradores ou um registrador e um valor imediato derivado da instrução e o resultado
+    é armazenado em algum registrador.
+
+    A arquitetura inclui as operações de soma ($+$), subtração ($-$), comparação de menor \emph{signed} ($<_s$)e \emph{unsigned} $<_u$,
+    operações binárias \emph{and} ($\land$), \emph{or} ($\lor$) e \emph{xor} ($\oplus$) e operações de deslocamento para esquerda
+    ($\ll$), para direita ($\gg$) e aritimético para direita ($\ggg$).
+
+    Sendo $A$ e $B$ dois vetores de \emph{bits} de mesmo tamanho $x$:
+
+\begin{itemize}
+  \item $ A + B = (|A|+|B| \% 2^x)^{'x}  $
+  \item $ A - B = A + (-B) $
+  \item $ A <_s B = \begin{cases}
+      1^{'x}, & \text{se } |^+A| < |^+B| \\
+      0^{'x}, & \text{caso contrário}
+      \end{cases}$
+
+  \item $ A <_u B = \begin{cases}
+      1^{'x}, & \text{se } |A| < |B| \\
+      0^{'x}, & \text{caso contrário}
+      \end{cases}$
+
+  \item $ A \land B = \sum_{i=1}^x \{A[x-i] \land B[x-i]\} $
+  \item $ A \lor B = \sum_{i=1}^x \{A[x-i] \lor B[x-i]\} $
+  \item $ A \oplus B = \sum_{i=1}^x \{A[x-i] \oplus B[x-i]\} $
+  \item $ A \ll B = \sum_{i=1}^{x} \begin{cases}
+    \{A[x-i+|B[4\text{:}0]|]\}, & \text{se } x-i+|B[4\text{:}0]| \text{ for uma posição válida } \\
+    0^{'1}, & \text{caso contrário}
+    \end{cases}$ \\
+  \item $ A \gg B = \sum_{i=1}^{x} \begin{cases}
+    \{A[x-i-|B[4\text{:}0]|]\}, & \text{se } x-i-|B[4\text{:}0]| \text{ for uma posição válida } \\
+    0^{'1}, & \text{caso contrário}
+    \end{cases}$ \\
+  \item $ A \ggg B = \sum_{i=1}^{x} \begin{cases}
+    \{A[x-i-|B[4\text{:}0]|]\}, & \text{se } x-i-|B[4\text{:}0]| \text{ for uma posição válida } \\
+    \{A[x-1]\}, & \text{caso contrário}
+    \end{cases}$ \\
+\end{itemize}
+
+  Onde $\%$ é o operador de resto. Dados $a, b, c, d \in \mathbb{N} $, $a / b = c \cdot b + d $: $a\%b := d$.
+  E $-B$ é o complemento para dois de B. $-B := B \oplus (2^x-1)^{'x} + 1^{'x}$.
+
+  Instruções entre registradores e immediatos utilizam o formato I enquanto operaçoes entre registradores 
+  utilizam o formato R.
+  
+  A arquitetura oferece duas instruções que utilizam o formato U para construção de constantes e
+  calculo de endereços relativos ao $pc$. A LUI quando utilizada em conjunto com a ADDI permite que
+  qualquer valor de 32 \emph{bits} seja escrito em um registrador e a instrução AUIPC permite que
+  utilizar o valor do $pc$ em que a instrução de localiza para computar endereços.
+
+  Considerando $reg^{32'32}$ o vetor de registradores e $pc^{'32}$, a
+  Tabela~\ref{tab:op32} descreve as instruções de operações entre registradores e ou imediatos.
+
+  \begin{table}
+    \begin{tabular}{ |p{0.13\linewidth}||p{0.15\linewidth}|p{0.25\linewidth}|p{0.40\linewidth}| } 
+      \hline
+      Mnemônico & Argumentos & Definição & Descrição\\ \hline \hline
+
+ADDI & $rd, rs1, imm$ & I$(19, 0)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] + imm}$\\ \hline
+SLTI & $rd, rs1, imm$ & I$(19, 2)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] <_s imm}$\\ \hline
+SLTIU & $rd, rs1, imm$ & I$(19, 3)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] <_u imm}$\\ \hline
+XORI & $rd, rs1, imm$ & I$(19, 4)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \oplus imm}$\\ \hline
+ORI & $rd, rs1, imm$ & I$(19, 6)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \lor imm}$\\ \hline
+ANDI & $rd, rs1, imm$ & I$(19, 7)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \land imm}$ \\ \hline
+SLLI & $rd, rs1, imm$ & I$(19, 1)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \ll imm}$ e $|imm| < 2^5$ \\ \hline
+SRLI & $rd, rs1, imm$ & I$(19, 5)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \gg imm}$ e $|imm| < 2^5$\\ \hline
+SRAI & $rd, rs1, imm$ & I$(19, 5)(rd, rs1, imm)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \ggg imm}$ e $2^{10} \leq |imm| < 2^{10} + 2^5$\\ \hline
+ADD & $rd, rs1, rs2$ & R$(51, 0, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] + reg[|rs2|]}$ \\ \hline
+SUB & $rd, rs1, rs2$ & R$(51, 0, 32)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] - reg[|rs2|]}$ \\ \hline
+SLL & $rd, rs1, rs2$ & R$(51, 1, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \ll reg[|rs2|]}$ \\ \hline
+SLT & $rd, rs1, rs2$ & R$(51, 2, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] <_s reg[|rs2|]}$ \\ \hline
+SLTU & $rd, rs1, rs2$ & R$(51, 3, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] <_u reg[|rs2|]}$ \\ \hline
+XOR & $rd, rs1, rs2$ & R$(51, 4, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \oplus reg[|rs2|]}$ \\ \hline
+SRL & $rd, rs1, rs2$ & R$(51, 5, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \gg reg[|rs2|]}$ \\ \hline
+SRA & $rd, rs1, rs2$ & R$(51, 5, 32)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \ggg reg[|rs2|]}$ \\ \hline
+OR & $rd, rs1, rs2$ & R$(51, 6, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \lor reg[|rs2|]}$ \\ \hline
+AND & $rd, rs1, rs2$ & R$(51, 7, 0)(rd, rs1, rs2)$ & $reg[|rd|]$ passa a ser igual a ${reg[|rs1|] \land reg[|rs2|]}$ \\ \hline
+LUI & $rd, imm$ & U$(55)(rd, imm)$ & $reg[|rd|]$ passa a ser igual a ${imm[31\text{:}12] + 0^{'12}}$ \\ \hline
+AUIPC & $rd, imm$ & U$(55)(rd, imm)$ & $reg[|rd|]$ passa a ser igual a ${imm + pc}$ \\ \hline
+
+    \end{tabular}
+  \caption{Tabela de instruções de operações entre registradores e ou imediatos \label{tab:op32}}
+  \end{table}
+
+\subsubsection{Instruções de transferência de controle}
+\label{ssec:jmp}
+
+  Com base o no valor do $pc$, o \emph{hart} carrega a instrução localizada no endereço de memória
+  e a executa. Caso a instrução não afete o valor do $pc$, ele é incrementado pelo número
+  de $bytes$ da instrução e o \emph{hart} carrega e executa a próxima instrução.
+
+  Instruções de pulo são utilizadas para alterar o $pc$ e o assim a próxima instrução a ser
+  processada. O endereço da próxima instrução que
+  seria executada é armazenado em no $rd$, processo chamado de \emph{link}. Elas utilizam o formato J e I.
+
+  Instruções de ramificação alteram o valor do $pc$ de forma condicional. Caso o critério de teste
+  da instrução seja atendido ele altera o valor do $pc$ com base em no valor imediato e caso contrário
+  o $pc$ é incrementado como nas outras instruções. Elas utilizam o formato B.
+
+  Considerando $reg^{32'32}$ o vetor de registradores e $pc^{'32}$, a
+  Tabela~\ref{tab:jb32} descreve as instruções de transferência de controle.
+
+  \begin{table}
+    \begin{tabular}{ |p{0.13\linewidth}||p{0.15\linewidth}|p{0.25\linewidth}|p{0.37\linewidth}| } 
+      \hline
+      Mnemônico & Argumentos & Definição & Descrição\\ \hline \hline
+
+JAL & $rd, imm$ & J$(111)(rd, imm)$ & $pc$ passa a ser igual a $pc + imm$ e $reg[|rd|]$ passa a ser igual a $pc + 4^{'32}$\\ \hline
+JALR & $rd, rs1, imm$ & I$(103, 0)(rd, rs1, imm)$ & $pc$ passa a ser igual a $(reg[|rs1|] + imm)[31\text{:}1] + 0^{'1}$ e $reg[|rd|]$ passa a ser igual a $pc + 4^{'32}$\\ \hline
+BEQ & $rs1, rs2, imm$ & B$(99, 0)(rs1, rs2, imm)$ & Se $rs1 = rs2$, $pc$ passa a ser igual a $pc + imm$. Caso contrário $pc$ passa a ser igual a $pc + 4^{'32}$ \\ \hline
+BNE & $rs1, rs2, imm$ & B$(99, 1)(rs1, rs2, imm)$ & Se $rs1 \neq rs2$, $pc$ passa a ser igual a $pc + imm$. Caso contrário $pc$ passa a ser igual a $pc + 4^{'32}$ \\ \hline
+BLT & $rs1, rs2, imm$ & B$(99, 4)(rs1, rs2, imm)$ & Se $rs1 <_s rs2$, $pc$ passa a ser igual a $pc + imm$. Caso contrário $pc$ passa a ser igual a $pc + 4^{'32}$ \\ \hline
+BGE & $rs1, rs2, imm$ & B$(99, 5)(rs1, rs2, imm)$ & Se $rs1 \geq_s rs2$, $pc$ passa a ser igual a $pc + imm$. Caso contrário $pc$ passa a ser igual a $pc + 4^{'32}$ \\ \hline
+BLTU & $rs1, rs2, imm$ & B$(99, 6)(rs1, rs2, imm)$ & Se $rs1 <_u rs2$, $pc$ passa a ser igual a $pc + imm$. Caso contrário $pc$ passa a ser igual a $pc + 4^{'32}$ \\ \hline
+BGEU & $rs1, rs2, imm$ & B$(99, 6)(rs1, rs2, imm)$ & Se $rs1 \geq_u rs2$, $pc$ passa a ser igual a $pc + imm$. Caso contrário $pc$ passa a ser igual a $pc + 4^{'32}$ \\ \hline
+
+    \end{tabular}
+  \caption{Tabela de instruções de transferência de controle \label{tab:jb32}}
+  \end{table}
+
+  $\geq_u$ e $\geq_s$ comparam se o valor e o valor \emph{signed} do vetor da esquerda são maiores ou iguais
+  aos respectivos valores do vetor da direita.
+
+  Caso a implementação não suporte instruções cujo o tamanho seja um múltiplo impar de 16 \emph{bits} e a
+  instrução executada altere o valor do $pc$ para um endereço que não seja alinhada em 32 \emph{bits}, uma exceção
+  de \emph{instruction-address-misaligned} (endereço de instrução desalinhado) deve ser levantada.
+  
+  Como o valor do $pc$ sempre é par antes de executar uma instrução e é garantido que após a execução 
+  de uma instrução de transferência de controle que o valor do $pc$ continue par
+  , seja pelos valores legais para o imediato no formato da 
+  instrução ou pela sua descrição da instrução (JALR garante $pc[0] = 0$), em implementações que suporte 
+  instruções cujo o tamanho seja um múltiplo impar de 16 \emph{bits} não é possível que a exceção de 
+  endereço desalinhado seja levantada.
+
+\subsubsection{Instruções de barreira e chamadas de ambiente}
+\label{ssec:fs32}
+
+  A arquitetura utiliza um modelo de ordenação fraca que permite que a ordem das operações de leitura e escrita
+  sejam alteradas desde que mantenham sua ordem perante a perspectiva do \emph{hart} que as executou.
+  Para garantir que essas operações sejam observadas na ordem desejada por outros \emph{harts},
+  é disponibilizada a instrução FENCE.
+
+  Ela utiliza o formato I e na versão atual da especificacão
+  os valores dos registradores passados são ignorados.
+  Os 11 \emph{bits} do imediato são interpretados utilizando uma estrutura específica. 
+  Considerando $imm^{'32}$ o vetor do imediato, ela possui os seguintes campos:
+
+  \begin{itemize}
+    \item $imm[0]$: Marcador de escrita no conjunto sucessor (SW).
+    \item $imm[1]$: Marcador de leitura no conjunto sucessor (SR).
+    \item $imm[2]$: Marcador de saída no conjunto sucessor (SO).
+    \item $imm[3]$: Marcador de entrada no conjunto sucessor (SI).
+    \item $imm[4]$: Marcador de escrita no conjunto predecessor (PW).
+    \item $imm[5]$: Marcador de leitura no conjunto predecessor (PR).
+    \item $imm[6]$: Marcador de saída no conjunto predecessor (PO).
+    \item $imm[7]$: Marcador de entrada no conjunto predecessor (PI).
+    \item $imm[11\text{:}8]$: Modo de barreira ou \emph(fence mode) ($f\!m$).
+  \end{itemize}
+
+  O valor de $f\!m$ determina como a barreira deve ser interpretada.
+  Caso $|f\!m| = 0$, qualquer operação do tipo marcado no conjunto
+  predecessor executada até o momento da instrução de barreira não 
+  pode ser observada por outros \emph{harts} depois de
+  qualquer operação do tipo marcado no conjunto
+  sucessor executada depois. Caso $|f\!m| = 1$ e apenas PR, PW, SR, SW
+  estejam marcados, operações de escrita do conjunto sucessor
+  pode ocorrer antes de operações de leitura do conjunto predecessor.
+  Esse modo com $|f\!m| = 1$ é nomeado \emph{total store order} (TSO) e sua implementação é opcional.
+
+  O sistema oferece as instruções ECALL e EBREAK para realizarem \emph{traps} para o ambiente de
+  execução. ECALL é utilizada para solicitar um serviço do ambiente como uma chamada de sistema e a
+  EBREAK é utilizada para retornar controle para o \emph{debugger}. Elas utilizam o formato I.
+
+  Para alterar o comportamento do \emph{hart}, é utilizado um conjunto de instruções que manipulam os
+  registradores de controle e status (\emph{control and status registers} ou CSRs) que não
+  fazem parte dos conjuntos base. A Tabela~\ref{tab:sys32} descreve as instruções de barreira e chamada de ambiente.
+
+  \begin{table}
+    \begin{tabular}{ |p{0.13\linewidth}||p{0.15\linewidth}|p{0.25\linewidth}|p{0.37\linewidth}| } 
+      \hline
+      Mnemônico & Argumentos & Definição & Descrição\\ \hline \hline
+
+FENCE & $(rd, rs1, imm)$ & I$(15, 0)(rd, rs1, imm)$ & Realiza a operação de barreira conforme descrito na seção~\ref{ssec:fs32} \\ \hline
+ECALL & $()$ & I$(115,0)(0,0,0)$ & Levanta uma \emph{trap} de chamada para o ambiente \\ \hline
+EBREAK &  $()$ & I$(115,0)(0,0,1)$ & Retorna o controle para o ambiente de \emph{debug} \\ \hline
+    \end{tabular}
+  \caption{Tabela de instruções de barreira e chamada de ambiente \label{tab:sys32}}
+  \end{table}
+
+\subsubsection{Instruções que não alteram o estado}
+\label{ssec:nop32}
+
+  A arquitetura padrão define que certas instruções que não alteram o estado, como as que escrevem
+  o resultado de uma operação no registrador $x0$, como dicas. Assim a operação
+  SUB(0, 2, 3) é reservada para representar informações extras sobre o contexto de execução.
+  Apesar da classificação de instruções como dicas, elas ainda não possuem uso na especificação.
+
+  A instrução ADDI$(0, 0, 0)$ é reservada como a instrução NOP (\emph{no operation}) e não é considerada
+  uma instrução de dica.
+
+  Um exemplo de uso de instruções que não alteram o estado para alterar o comportamento presente em \cite{RVS1}
+  é a sequência de instruções que permitem \emph{semihosting}: $\{ \text{SLLI}(0, 0, \text{h1f}),  \text{EBREAK}, \text{SRAI}(0, 0, 7)\}$.
+
+  Quando essa sequência de instruções aparece em um processador que implementa a funcionalidade,
+  ao invés de executar a instrução de BREAK para retornar o controle para o \emph{debugger},
+  ela é executada como uma ECALL para o ambiente de \emph{debug}.
+
+\subsection{Registradores de controle e status}
+\label{sec:CSRs}
+
+  A RISC-V define um espaço separado de 4096 CSRs para cada \emph{hart}. Cada CSR possui uma funcionalidade específica, como
+  contador de ticks, vetor para tratamento de exceção e informação das extensões suportadas. A arquitetura trata o espaço
+  separado do espaço de memória e operações de FENCE não afetam ele.
+
+  O comportamento ao ler ou escrever um CSR é complexo e depende de qual CSR é utilizado. As instruções podem ou não gerar
+  eventos de leitura e ou escrita dependendo dos argumentos e cada CSR possui um comportamento específico em relação a leitura
+  e escrita de valores:
+
+  \begin{itemize}
+    \item \emph{Reserved Writes Preserve Value, Read Ignores Values} (WPRI) ou escritas reservadas preservam valor, leitura
+          ignora valor: Alguns campos de um CSR podem estar reservados para uso futuro, assim a leitura desses campos deve
+          ser ignorada e é necessário preservar (não alterar) o valor desse campos em caso de escritas do CSR.
+    \item \emph{Write/Read Only Legal Values} (WLRI) ou escrita/leitura apenas de valores válidos: Apenas valores válidos podem
+          ser escritos no CSR e não podem assumir que um valor válido será lido antes de escrever um valor válido. É possível que
+          em caso de valores inválidos ao escrever no CSR seja levantada uma exceção de instrução ilegal, porém não um comportamento
+          obrigatório.
+    \item \emph{Write Any Value, Reads Legal Values} (WARL) ou escreve qualquer valor, lê valores válidos: A escrita de valores 
+          inválidos não deve levantar exceções e a leitura é sempre de um valor válido. Isso permite que a escrita seja usaja
+          para validar se alguma funcionalidade está disponível e em caso de sucesso o valor atualizado será lido.
+  \end{itemize}
+
+  A largura de um CSR em conjutos base maiores que 32 \emph{bits} podem ter seu valor alterado de forma dinâmica, porém
+  esse comportamento não será abordado aqui uma vez para os conjuntos de 32 \emph{bits} seu tamanho é fixado em 32 \emph{bits}.
+
+  A Tabela~\ref{tab:csr} lista as instruções para manipulação de CSRs que definem a extensão Zicsr.
+  Considerando $reg^{32'32}$ o vetor de registradores e $csr^{32'4096}$ o espaço de CSRs para a descrição das instruções:
+
+  \begin{itemize}
+    \item CSRRW escreve o valor de $reg[|rs1|]$ em $csr[|imm[11\text{:}0]|]$ e o valor antigo de $csr[|imm[11\text{:}0]|]$
+          é amarzenado em $reg[|rd|]$. Caso $rd = 0^{'5}$, a operação de leitura não ocorre.
+    \item CSRRS escreve o valor de $csr[|imm[11\text{:}0]|] \lor reg[|rs1|]$ em $csr[|imm[11\text{:}0]|]$ e o valor antigo 
+    de $csr[|imm[11\text{:}0]|]$ é amarzenado em $reg[|rd|]$.
+    Caso $rs1 = 0^{'5}$ a operação de escrita não ocorre.
+    \item CSRRC escreve o valor de $csr[|imm[11\text{:}0]|] \land \sim\! reg[|rs1|]$ em $csr[|imm[11\text{:}0]|]$ e o valor antigo 
+    de $csr[|imm[11\text{:}0]|]$ é amarzenado em $reg[|rd|]$. 
+    Caso $rs1 = 0^{'5}$ a operação de escrita não ocorre.
+    \item CSRRWI escreve o valor de $|uimm|^{'32}$ em $csr[|imm[11\text{:}0]|]$ e o valor antigo de $csr[|imm[11\text{:}0]|]$
+    é amarzenado em $reg[|rd|]$. Caso $rd = 0^{'5}$, a operação de leitura não ocorre.
+    \item CSRRSI escreve o valor de $csr[|imm[11\text{:}0]|] \lor |uimm|^{'32}$ em $csr[|imm[11\text{:}0]|]$ e o valor antigo 
+    de $csr[|imm[11\text{:}0]|]$ é amarzenado em $reg[|rd|]$. Caso $uimm = 0^{'5}$ a operação de escrita não ocorre.
+    \item CSRRCI escreve o valor de $csr[|imm[11\text{:}0]|] \land \sim\! |uimm|^{'32}$ em $csr[|imm[11\text{:}0]|]$ e o valor antigo 
+    de $csr[|imm[11\text{:}0]|]$ é amarzenado em $reg[|rd|]$. Caso $uimm = 0^{'5}$ a operação de escrita não ocorre.
+  \end{itemize} 
+
+  O operador $\sim$ inverte os \emph{bits} do vetor prefixado por ele.
+
+  \begin{table}
+    \begin{tabular}{ |p{0.13\linewidth}||p{0.2\linewidth}|p{0.3\linewidth}| } 
+      \hline
+      Mnemônico & Argumentos & Definição\\ \hline \hline
+
+CSRRW & $(rd, rs1, imm)$ & I$(115, 1)(rd, rs1, imm)$ \\ \hline
+CSRRS & $(rd, rs1, imm)$ & I$(115, 2)(rd, rs1, imm)$ \\ \hline
+CSRRC & $(rd, rs1, imm)$ & I$(115, 3)(rd, rs1, imm)$ \\ \hline
+CSRRWI & $(rd, uimm, imm)$ & I$(115, 5)(rd, uimm, imm)$ \\ \hline
+CSRRSI & $(rd, uimm, imm)$ & I$(115, 6)(rd, uimm, imm)$ \\ \hline
+CSRRCI & $(rd, uimm, imm)$ & I$(115, 7)(rd, uimm, imm)$ \\ \hline
+
+    \end{tabular}
+  \caption{Tabela de instruções para manipulação de CSRs \label{tab:csr}}
+  \end{table}
+
+  O conjuto base especifica um conjunto de contadores opicionais de 64 \emph{bits} mapeados em pares de CSRs.
+  Os principais contadores são RDCYCLE, RDTIME e RDINSTRET que contam respectivamente o número de ciclos 
+  de \emph{clock}, um número incrementado em um intervalo de tempo constante determinado pela EEI e o número de 
+  instruções executadas. A parte inferior ($[31\text{:}0]$) desse contadores se localizam nas posições
+  hC00, hC01 e hC02 e a parte superior ($[63\text{:}32]$) nas posições hC80, hC81 e hC82 e são apenas para leitura.
+
+\subsection{Arquitetura privilegiada e tratamento de exceções}
+\label{sec:excep}
+
+  A especificação da parte privilegiada da arquiteture, \cite{RVS2}, descreve o o comportamento relacionado
+  a execução privilegiada, memória virtual, tratamento de exceções e afins. A implementação da parte privilegiada 
+  pode ser apenas parcial e pode variar de forma extensiva entre diversas implementações RISC-V. Porém é
+  esperado que as partes em comum implementadas por sistemas diferentes apresentem o mesmo comportamento.
+
+  3 níveis de privilégios são definidos: usuário (U), supervisor (S) e máquina (M). Os modos são codificados por
+  $0^{'2}$ para usuário, $1^{'2}$ para supervisor e $3^{'2}$ para máquina. Toda implementação deve suportar o modo
+  máquina e o modo usuário e supervisor são opicionais sendo obrigatório o suporte do modo usuário caso o supervisor
+  seja suportado.
+
+  Por breviedade só será abordado o mecanismo mínimo para lidar com exceções a nível de máquina.
+  Ele é implementado através dos CSRs $mstatus$, $mtvec$, $mscratch$, $mepc$, $mcause$ e $mtval$ localizados nas
+  posições h300, h305, h340, h341, h342 e h343 respectivamente.
+
+  Considerando $csr^{32'4096}$ o espaço de CSRs, $mstatus = csr[\text{h300}]$,
+  $mtvec = csr[\text{h305}]$, 
+  $mscratch = csr[\text{h340}]$, 
+  $mepc = csr[\text{h341}]$, 
+  $mcause = csr[\text{h342}]$ e
+  $mtval = csr[\text{h343}]$, a listagem a seguir apresenta os campos de interesse:
+
+  \begin{itemize}
+    \item $mstatus[3\text{:}3]$ (MIE) determina se interrupções estão habilitadas caso seu valor seja 1 e 0 caso o contrário.
+    \item $mstatus[7\text{:}7]$ (MPIE) guarda o MIE anterior e é utilizada para restaurar o MIE após a execução
+    da instrução MRET.
+    \item $mstatus[12\text{:}11]$ (MPP) determina o nível de privilégio a ser retornado quando a intrusção para retorno de 
+          interrupção ou excessão ocorra.
+    \item $mtvec[1\text{:}0]$ (MODE) determina como o endereço em caso de interrupções é utilizado. Caso o valor seja
+          0 o endereço é utilizado diretamente. Caso o valor seja 1 o endereço utilizado é somado com 4 vezes o valor
+          da causa antes de ser atribuído ao $pc$. Outros valores foram reservados para uso futuro.
+    \item $mtvec[31\text{:}2]$ (BASE) guarda o endereço utilizado em caso de interrupções. Ele é computado por
+          $ mtvec[31\text{:}2] + 0^{'2} $.
+    \item $mscratch$ é utilizado para armazenar um valor no modo de máquina. Ele pode ser utilizado para computar o
+          o contexto a ser carregado no caso de uma interrupção.
+    \item $mepc$ guarda o valor do $pc$ antes da interrução acontecer. Ele é utilizado quando a instrução de retorno de
+          interrupção é executada para definir o valor do $pc$.
+    \item $mcause$ guarda a causa da interrupção com o \emph{bit} da maior posição sendo utilizado para demarcar se foi
+          uma interrução em si e o restante dos \emph{bits} guardam o valor da causa.
+          A Tabela~\ref{tab:icause} lista as causas de interesse.
+    \item $mtval$ é utilizado para armazenar valores relacionados a interrupção como a instrução que causou uma exeção
+          de instrução ilegal.
+  \end{itemize}
+
+  Quando ocorre uma interrução, MPIE guarda o valor de MIE, MIE passa a valer 0, o MPP passa a valer o nível
+  de execução no momento em que a execução ocorreu, $mepc$ recebe o valor do $pc$ e os campos $mcause$ e $mtval$
+  são preenchidos de acordo. O valor do $pc$ é atualizado de acordo com o valor de $mtvec$ e o \emph{hart}
+  contínua a processar as instruções no modo de máquina.
+
+  A instrução MRET é utilizada para retornar da resolução de uma exceção. Ela utiliza o formato I e possui a definição
+  I$(115, 0)(0, 0, 700)$. Quando ela é executada, $pc$ recebe o valor de $mepc$, MIE recebe o valor de MPIE, MPIE 
+  passa a valer 1 e MPP é redefinido para o valor do modo de usuário (ou de máquina caso o modo de usuário não seja 
+  suportado) e o \emph{hart} contínua a processar as instruções com o modo de acordo com o antigo valor de MPP.
+
+  \begin{table}
+    \begin{tabular}{ |p{0.13\linewidth}||p{0.2\linewidth}|p{0.55\linewidth}| } 
+      \hline
+      Interrupção & Código da Exeção & Descrição \\ \hline \hline
+
+1 & 7 & Interrupção de máquina por temporizador \\ \hline
+1 & 11 & Interrupção de máquina por uma causa externa \\ \hline
+0 & 2 & Instrução ilegal \\ \hline
+0 & 8 & Chamada de ambiente do nível de usuário \\ \hline
+0 & 10 &  Chamada de ambiente do nível de máquina \\ \hline
+
+    \end{tabular}
+  \caption{Tabela de causas de interrupções \label{tab:icause}}
+  \end{table}
+
+  O sistema de temporizador utiliza dois campos de 64 \emph{bits}, $mtime$ e $mtimecmp$.
+  O $mtime$ é acessado pelo RDTIME enquanto o $mtimecmp$ é mapeado na memória pricipal pelo EEI.
+  Enquanto o $mtime$ for maior que o $mtimecmp$, a interrupção de máquina por temporizador é
+  emitida.
+
+\subsection{Instruções comprimidas}
+\label{sec:C}
+
+  A extensão C é constituída por instruções comprimidas de 16 \emph{bits}. Elas são consideradas comprimidas
+  pois é possível mapear cada uma delas em instruções de 32 \emph{bits}.
+  
+  Devido o menor espaço de instruções válidas ($2^{16} - 2^{14}$), algumas das instruções se 
+  sobrepõem e depende do conjunto base utilizado para saber qual deve ser executada. Instruções 
+  da extensão C não disponíveis para o conjunto base RV32I não serão cobertas nesta seção.
+
+  A função da extensão é permitir a redução do tamanho de executáveis com uma redução estimada de 20-30\%
+  no tamanho da seção de texto dos programas.
+
+  A Tabela~\ref{tab:c} lista as instruções comprimidas que definem a extensão C e são suportadas por
+  implementações que utilizam a base RV32I. Considerando $reg^{32'32}$ o vetor de registradores e
+  $mem^{8'2^\text{XLEN}}$ o vetor da memória:
+
+  \begin{itemize}
+  
+  \item C.LWSP$(rd, uimm)$ expande para LW$(|rd|, 2, |uimm|)$.
+  \item C.SWSP$(rs2, uimm)$ expande para SW$(2,|rs2|,|uimm|)$.
+  \item C.LW$(rd', rs1', uimm)$ expande para LW$(|rd|, |rs1|, |uimm|)$.
+  \item C.SW$(rs1', rs2', uimm)$ expande para SW$(|rs1|, |rs2|, |uimm|)$.
+  \item C.J$(imm)$ expande para JAL$(0, ||^+imm|^{'32}|)$.
+  \item C.JAL$(imm)$ expande para JAL$(1, ||^+imm|^{'32}|)$, note que o próxima instrução está em $pc+2$.
+  \item C.JR$(rs1)$ expande para JALR$(0, rs1, 0)$, note que o próxima instrução está em $pc+2$.
+  \item C.JALR$(rs1)$ expande para JALR$(1, rs1, 0)$, note que o próxima instrução está em $pc+2$.
+  \item C.BEQZ$(rs1', imm)$ expande para BEQ$(|rs1|, 0, ||^+imm|^{'32}|)$.
+  \item C.BNEZ$(rs1', imm)$ expande para BNE$(|rs1|, 0, ||^+imm|^{'32}|)$.
+  \item C.LI$(rd, imm)$ expande para ADDI$(|rd|, 0, ||^+imm|^{'32}|)$.
+  \item C.LUI$(rd, nzimm)$ expande para LUI$(|rd|, ||^+nzimm|^{'32}|)$.
+  \item C.ADDI$(rs1/rd, nzimm)$ expande para ADDI$(|rs1/rd|, |rs1/rd|, ||^+nzimm|^{'32}|)$.
+  \item C.ADDI16SP$(nzimmm)$ expande para ADDI$(2, 2, ||^+nzimm|^{'32}|)$.
+  \item C.ADDI4SPN$(rd', nzuimm)$ expande para ADDI$(|rd|, 2, ||^+nzimm|^{'32}|)$.
+  \item C.SLLI$(rs1/rd, nzuimm)$ expande para SLLI$(|rs1/rd|, |rs1/rd|, |nzuimm|)$.
+  \item C.SRLI$(rs1'/rd', uimm)$ expande para SRLI$(|rs1/rd|, |rs1/rd|, |uimm|)$.
+  \item C.SRAI$(rs1'/rd', uimm)$ expande para SRAI$(|rs1/rd|, |rs1/rd|, |uimm|)$.
+  \item C.ANDI$(rs1'/rd', imm)$ expande para ANDI$(|rs1/rd|, |rs1/rd|, ||^+imm|^{'32}|)$.
+  \item C.MV$(rd, rs2)$ expande para ADD$(|rd|, 0, |rs2|)$.
+  \item C.ADD$(rs1, rs2)$ expande para ADD$(|rs1|, |rs1|, |rs2|)$.
+  \item C.AND$(rs1'/rd', rs2')$ expande para AND$(|rs1/rd|, |rs1/rd|, |rs2|)$.
+  \item C.OR$(rs1'/rd', rs2')$ expande para OR$(|rs1/rd|, |rs1/rd|, |rs2|)$.
+  \item C.XOR$(rs1'/rd', rs2')$ expande para XOR$(|rs1/rd|, |rs1/rd|, |rs2|)$.
+  \item C.SUB$(rs1'/rd', rs2')$ expande para SUB$(|rs1/rd|, |rs1/rd|, |rs2|)$.
+  \item C.NOP expande para NOP, definida como ADDI$(0,0,0)$.
+  \item C.EBREAK expande para EBREAK$()$.
+  \end{itemize}
+
+  A instrução $0^{'16}$ é reservada como instrução ilegal.
+
+  \begin{table}
+    \begin{tabular}{ |p{0.15\linewidth}||p{0.25\linewidth}|p{0.5\linewidth}| } 
+      \hline
+      Mnemônico & Argumentos & Definição \\ \hline \hline
+% & & \\ \hline
+C.LWSP & $(rd, uimm^{'8})$ & CI$(2, 2)(rd, uimm[4\text{:}2|7\text{:}6], uimm[5\text{:}5]), rd \neq 0$ \\ \hline
+C.SWSP & $(rs2, uimm^{'8})$ & CSS$(2, 6)(rs2, uimm[5\text{:}2|7\text{:}6])$ \\ \hline
+C.LW & $(rd', rs1', uimm^{'8})$ & CL$(0, 2)(rd', rs1', uimm[2\text{:}2|6\text{:}6], uimm[5\text{:}3])$ \\ \hline
+C.SW & $(rs1', rs2', uimm^{'8})$ & CS$(0, 2)(rs1', rs2', uimm[2\text{:}2|6\text{:}6], uimm[5\text{:}3])$ \\ \hline
+C.J & $(imm^{'12})$ & CJ$(1, 5)(imm[11\text{:}11|4\text{:}4|9\text{:}8|10\text{:}10|6\text{:}7|3\text{:}1|5\text{:}5])$ \\ \hline
+C.JAL & $(imm^{'12})$ & CJ$(1, 1)(imm[11\text{:}11|4\text{:}4|9\text{:}8|10\text{:}10|6\text{:}7|3\text{:}1|5\text{:}5])$ \\ \hline
+C.JR & $(rs1)$ & CI$(2, 4)(rs1, 0, 0), rs1 \neq 0$ \\ \hline
+C.JALR & $(rs1)$ & CI$(2, 4)(rs1, 0, 1), rs1 \neq 0$ \\ \hline
+C.BEQZ & $(rs1', imm^{'9})$ & CB$(1, 6)(rs1, imm[7\text{:}6|2\text{:}1|5\text{:}5], imm[8\text{:}8|4\text{:}3])$ \\ \hline
+C.BNEZ & $(rs1', imm^{'9})$ & CB$(1, 7)(rs1, imm[7\text{:}6|2\text{:}1|5\text{:}5], imm[8\text{:}8|4\text{:}3])$ \\ \hline
+C.LI & $(rd, imm^{'6})$ & CI$(1, 2)(rd, imm[4\text{:}0], imm[5\text{:}5]), rd \neq 0$ \\ \hline
+C.LUI & $(rd, nzimm^{'18})$ & CI$(1, 3)(rd, imm[16\text{:}12], imm[17\text{:}17]), rd \neq 2, rd \neq 0$ \\ \hline
+C.ADDI & $(rs1/rd, nzimm^{'6})$ & CI$(1, 0)(rs1/rd, nzimm[4\text{:}0], nzimm[5\text{:}5]),$ $rs1/rd \neq 0$ \\ \hline
+C.ADDI16SP & $(nzimm^{'10})$ & CI$(1, 3)(2, imm[16\text{:}12], imm[17\text{:}17]),$ $nzimm \neq 0$ \\ \hline
+C.ADDI4SPN & $(rd', nzuimm^{'10})$ & CIW$(0, 0)(rd', nzuimm[5\text{:}4|9\text{:}6|2\text{:}3]),$ $nzuimm \neq 0$ \\ \hline
+C.SLLI & $(rs1/rd, nzimm^{'6})$ & CI$(2, 0)(rs1/rd, nzimm[4\text{:}0], nzimm[5\text{:}5]),$ $rs1/rd \neq 0$ \\ \hline
+C.SRLI & $(rs1'/rd', uimm^{'6})$ & CA$(1, uimm[4\text{:}2], 4^{'3}+uimm[5]^{'1}+0^{'2})$ $(rs1'/rd', uimm[1\text{:}0]), |uimm[5]| = 0$ \\ \hline
+C.SRAI & $(rs1'/rd', uimm^{'6})$ & CA$(1, uimm[4\text{:}2], 4^{'3}+uimm[5]^{'1}+1^{'2})$ $(rs1'/rd', uimm[1\text{:}0]), |uimm[5]| = 0$  \\ \hline
+C.ANDI & $(rs1'/rd', imm^{'6})$ & CA$(1, imm[4\text{:}2], 4^{'3}+imm[5]^{'1}+2^{'2})$ $(rs1'/rd', imm[1\text{:}0])$ \\ \hline
+C.MV & $(rd, rs2)$ & CI$(2, 4)(rd, rs2, 0), rs2 \neq 0, rd \neq 0$  \\ \hline
+C.ADD & $(rs1, rs2)$ & CR$(2, 9)(rs1, rs2), rs1 \neq 0, rs2 \neq 0$ \\ \hline
+C.AND & $(rs1'/rd', rs2')$ & CA$(1, 3, 35)(rs1'/rd', rs2')$ \\ \hline
+C.OR & $(rs1'/rd', rs2')$ & CA$(1, 2, 35)(rs1'/rd', rs2')$ \\ \hline
+C.XOR & $(rs1'/rd', rs2')$ & CA$(1, 1, 35)(rs1'/rd', rs2')$ \\ \hline
+C.SUB & $(rs1'/rd', rs2')$ & CA$(1, 0, 35)(rs1'/rd', rs2')$ \\ \hline
+C.NOP & $()$ & CI$(1, 0)(0, 0, 0)$ \\ \hline
+C.EBREAK & $()$ & CR$(2, 9)(0, 0)$  \\ \hline
+
+    \end{tabular}
+  \caption{Tabela de instruções comprimidas \label{tab:c}}
+  \end{table}
+
+\subsection{Nomenclatura}
+\label{sec:name}
+
+  A arquitetura define um esquema de nomenclatura para definir quais extensões um \emph{hart}
+  RISC-V suporta. A nomenclatura não é sensível a caixa alta.
+
+  De modo geral a primeira parte é composta pela arquitetura base, seguida pelas extensões oficiais
+  suportadas que são representas ou por uma letra do alfabeto ou prefixada pela letra Z.
+
+  A letra G é usada como uma abreviação para as extensões IMAFDZicsr\_Zifencei. Extensões que 
+  são consideradas dependências de outras podem ser omitidas como é o caso das extensões F e Zicsr
+  que são dependências da extensão D.
+
+  O uso de \_ é apenas para facilitar a leitura e não possui significado sintático.
+
+  Após a extensão é possível adicionar o número da versão suportado e caso seja uma versão que utiliza
+  um ponto como separador, é utilizado um `p' no lugar, por exemplo RV32I2p1 para a versão 2.1
+  do conjunto RV32I.
+
+  O núcleo desenvolvido neste trabalho implementa o conjunto RV32I com as extensões C e Zicsr
+  e por isso pode ser nomeado um processador RV32ICZicsr.
+
+\newpage
+
+\section{\emph{Verilog}}
+\label{sec:Verilog}
+
+Para desenvolver um processador é utilizada uma linguagem de descrição
+de \emph{hardware} para descrever o comportamento do circuito e com base na descrição, sintetizar
+uma configuração (ou \emph{netlist}) para uso em FPGAs ou fabricação \emph{chips}.
+
+Inventada em 1984 por Prabhu Goel, Phil Moorby, Chi-Lai Huang e Douglas Warmke \citep{VEEH}
+enquanto tabalhavam na \emph{Gateway Design Automation} para uso no simulador \emph{Verilog-XL},
+a \emph{Verilog} é hoje um padrão de indústria, suportada tanto por simuladores de código fechado quanto
+aberto e aceito pela maioria dos sintetizadores de lógica resitor-transistor (RTL do inglês
+\emph{resistor-transistor logic}) utilizados para a geração de \emph{netlists}.
+
+De modo simplificado ela permite a representação de circuitos através de:
+\begin{itemize}
+  \item \emph{Wires} que representam sinais lógicos cujo o valor é derivado de outros \emph{wires} e \emph{regs}.
+  \item \emph{Reg} que representam \emph{bits} capazes de reter seu valor até a próxima atribuição de valor.
+  \item \emph{Modules} (ou módulos) que representam uma coleção de \emph{wires}, \emph{regs}, outros \emph{modules} e relações entre eles.
+\end{itemize}
+
+\emph{Wires} podem ser combinados em vetores similares a vetores de \emph{bits}.
+Através de declarações \texttt{assign} é possível definir o valor de \emph{wires} com base em uma expressão 
+de outros \emph{wires} e \emph{regs} com operações similares as as descritas na Seção~\ref{ssec:regimm}.
+
+\emph{Regs} também podem ser combinados em vetores similares a vetores de \emph{bits}.
+Através de declarações \texttt{always} é possível definir a atribuição de valores condicionados a um evento.
+Declarações \texttt{always} utilizam uma sintaxe similar à sequência de delcarações dentro do corpo de uma 
+função na linguagem \emph{C}.
+
+\emph{Modules} são compostos por um conjunto de \emph{wires}, \emph{regs}, declarações \texttt{assign},
+declarações \texttt{always} e instância de \emph{modules} internos. Além disso eles possuem uma lista de \emph{wires}
+e \emph{regs} que são usados como sinais de entrada e saída (\emph{regs} só podem ser utilizados como saída)
+para interface com outros módulos.
+
+\subsection{Exemplos de programas \emph{Verilog}}
+\label{sec:exverilog}
+
+\subsubsection{Contador}
+\label{ssec:counter}
+
+\begin{program}
+  \centering
+
+\begin{lstlisting}[language=Verilog, style=wider]
+module Contador(
+    contador,
+    reset,
+    clock
+);
+
+output reg [31:0]contador;
+input reset;
+input clock;
+
+always @(posedge clock) contador <= reset ? 0 : contador + 1;
+
+endmodule
+\end{lstlisting}
+
+  \caption{Exemplo de um contador em \emph{Verilog}\label{prog:counter}}
+\end{program}
+
+O Programa~\ref{prog:counter} apresenta um \emph{module} de contador,
+onde o \emph{reg} \texttt{contador} é a saída e os \emph{wires}
+\texttt{reset} e \texttt{clock} são as entradas do módulo.
+
+O trecho \texttt{@(posedge clock)} após a palavra chave
+\texttt{always} determina que sempre que o sinal do \texttt{clock} for de
+0 para 1, a expressão \texttt{contador <= reset ? 0 : contador + 1}
+é processada. \texttt{<=} é um operador de atribuição assíncrona e
+\texttt{reset ? 0 : counter + 1} é similar ao operador ternário da linguagem
+\emph{C}, determinando que o  \texttt{contador} passará a valer 0
+caso o sinal \texttt{reset} esteja elevado (valendo 1) ou será incrementado
+caso contrário.
+
+\subsubsection{Multiplexador}
+\label{ssec:mux}
+
+\begin{program}
+  \centering
+
+\begin{lstlisting}[language=Verilog, style=wider]
+module Multiplexador(
+    saida,
+    entradas,
+    seletor,
+);
+
+output saida;
+input [3:0]entradas;
+input [1:0]seletor;
+
+assign saida = entradas[seletor];
+
+endmodule
+\end{lstlisting}
+
+  \caption{Exemplo de um multiplexador em \emph{Verilog}\label{prog:mux}}
+\end{program}
+
+O Programa~\ref{prog:mux} apresenta um \emph{module} de multiplexador,
+onde o \emph{wire} \texttt{saida} é a saída e os \emph{wires}
+\texttt{entradas} e \texttt{seletor} são as entradas do módulo.
+
+A expressão \texttt{saida = entradas[seletor]} após a palavra chave
+\texttt{assign} determina que a saida sempre irá valor o valor do
+\emph{wire} de \texttt{entradas} na posição determinada pelo valor 
+do vetor de \emph{wires} \texttt{seletor}.
+
+\subsubsection{Relógio}
+\label{ssec:clock}
+
+\begin{program}
+  \centering
+
+\begin{lstlisting}[language=Verilog, style=wider]
+module Contador(
+    contador,
+    reset,
+    clock
+);
+
+output reg [31:0]contador;
+input reset;
+input clock;
+
+always @(posedge clock) contador <= reset ? 0 : contador + 1;
+
+endmodule
+
+module Relogio(
+    segundo,
+    minuto,
+    reset,
+    clock
+);
+
+output [31:0]segundo;
+output [31:0]minuto;
+input reset;
+input clock;
+
+wire minutos_clock;
+wire segundos_reset;
+
+Contador segundos(
+    .contador(segundo),
+    .reset(segundos_reset),
+    .clock(clock)
+);
+
+Contador minutos(
+    .contador(minuto),
+    .reset(reset),
+    .clock(minutos_clock)
+);
+
+assign segundos_reset = reset | (segundo == 59);
+assign minutos_clock = reset ? clock : segundo != 59;
+
+endmodule
+\end{lstlisting}
+
+  \caption{Exemplo de um relógio em \emph{Verilog}\label{prog:clock}}
+\end{program}
+
+O Programa~\ref{prog:clock} apresenta um \emph{module} de relógio,
+onde os \emph{wires} \texttt{segundo} e \texttt{minutos} são as 
+saída e os \emph{wires} \texttt{clock} e \texttt{reset} são as entradas 
+do módulo.
+
+O \emph{module} \texttt{Contador} é instanciado em \texttt{minutos}
+e em \texttt{segundos}. A saída \texttt{segundo} é igual a saída 
+\texttt{segundos.contator} e a saída \texttt{minuto} é igual a saída 
+\texttt{minutos.contator}.
+
+Para atingir o comportamento de um relógio, o contador de segundos é
+reiniciado caso ele seja incrementado enquanto vale 59, isso é feito
+através do \emph{wire} \texttt{segundos\_reset} que vale 1 ou quando
+\texttt{reset} vale 1 ou quando \texttt{segundo} vale 59.
+Além disso o contador do minutos só deve incrementar quando segundos
+for incrementado de 59 para 0, isso é feito através do \emph{wire}
+\texttt{minutos\_clock} que funciona como um sinal de \emph{clock} que só
+sobe quando os segundos forem de 59 para 0 quando o \texttt{reset} vale 0
+e reflete o \texttt{clock} quando o \texttt{reset} vale 1.
+
+\subsection{Simulação de módulos em \emph{Verilog}}
+\label{sec:vesim}
+
+A forma usual de simular módulos \emph{Verilog} é através
+da escrita de um módulo que não possui nem sinais de entrada
+nem sinais de saida e instancia os módulos a serem simulados. Por meio
+de funcionalidades não sintetizáveis da linguagem é possível
+simular estímulos de sinais a serem enviados para os módulos 
+instanciados avaliar se o comportamento é o esperado.
+
+Porém a escrita desses módulos pode acabar sendo muito 
+rígida ou contra produtiva devido a linguagem \emph{Verilog} ser primariamente
+uma linguagem de descrição de \emph{hardware} e não uma linguagem de
+programação de uso geral. Uma solução utilizada para amenizar as 
+limitações da linguagem é o uso de extensões que permitem que o simulador 
+carregue bibliotecas dinâmicas e então disponibilize funções 
+definidas nelas para que sejam chamadas
+pelo código \emph{Verilog} como em \cite{VPI}.
+
+Uma outra solução é a utilizada pelo programa \emph{Verilator} criado
+em 1994 por Paul Wasson enquanto trabalhava na \emph{Digital Equipment Corporation}
+\citep{Veri}. Ao invés de utilizar um simulador para simular o código \emph{Verilog},
+o \emph{Verilator} converte o código em uma classe \emph{C++} que pode ser compilada e 
+ligada a uma biblioteca fornecida pelo programa para simular o comportamento do circuito.
+
+O fato do módulo virar uma classe \emph{C++} permite que a simulação seja escrita
+em qualquer linguagem de programação que apresente meios de chamar código \emph{C++}
+e simplifica a integração com sistemas de integração 
+contínua e testes tradicionais.
+
+\newpage
+\section{Objective-C}
+\label{sec:ObjC}
+
+\emph{Objetive-C} é uma linguagem de programação de uso geral que adicona um
+sitema de objetos e mensagens similar ao da linguagem \emph{Smalltalk} à linguagem
+\emph{C}. Criada por Brad Cox e Tom Love inicialmente como um pré processador
+para a \emph{C} em 1983 \citep{OOPC}, ela evoluiu para uma linguagem própria
+e ganhou popularidade junto o sucesso \emph{iPhone} por ter sido a 
+principal linguagem de desenvolvimento.
+
+Similar à \emph{Smalltalk}, o sistema de objetos é implementado de forma dinâmica,
+permitindo que classes sejam definidas e modificadas em tempo de execução.
+Assim a linguagem depende do ambiente de execução para ter seu comportamento
+determinado. Dentre os principais ambientes de execução disponíveis existem o
+\emph{Objective-C runtime} de código fechado da \emph{Apple} e os projetos
+de código aberto \emph{GNUStep}, \emph{Mulle-Objc} e \emph{ObjFW}.
+
+A interopabilidade com código em \emph{C} e a simplicidade do modelo
+de orientação a objetos implementado torna faz com que a linguagem seja
+de fácil aprendizado para programadores que já conheçam \emph{C} e busquem
+utilizar funcionalidades de linguagens orientadas a objetos. 
+
+\subsection{Objetos e Classes}
+\label{sec:class}
+
+Objetos são representados através de ponteiros em \emph{C} e podem
+rebecer mensagens através de uma sintaxe especial que utiliza colchetes.
+As mensagems são compostas pelo objeto que recebe a mensagem, separadores 
+terminados com o caractere \texttt{:} caso precedam um argumento e os
+argumentos da mensagem.
+
+Considerando \texttt{listaDeCompra} um objeto, a expressão
+\texttt{[listaDeCompra adicionaProdutoComNome:@"Laranjas" unidade:@"Dúzia" quantidade:2.0]}
+envia para o objeto a mensagem \texttt{adicionaProdutoComNome:unidade:quantidade:} com os argumentos
+\texttt{@"Laranjas"}, \texttt{@"Dúzia"} e \texttt{2.0} onde \texttt{@"..."} representa um objeto de
+cadeia de caracteres.
+
+As classes podem ser definidas através de uma sintaxe expecial como ilusta o Programa~\ref{prog:sampleclass}.
+Entre \texttt{@interface} e \texttt{@end} é declarado os seletores (métodos) da classe e suas propriedades. Esse
+trecho costuma ser inserido em um arquivo de cabeçalho para que a classe seja referenciada por outras clases.
+Entre \texttt{@implementation} e \texttt{@end} é implementado os seletores (métodos) da classe e esse trecho costuma
+ser inserido em um arquivo de implementação com a extensão \texttt{.m}.
+Seletores da classe são prefixadas por um \texttt{+} na declaração e na implementação
+e seletores de uma instância da classe são prefixadas por um \texttt{-}.
+
+\begin{program}
+  \centering
+
+\lstset{language=[Objective]C}
+\begin{lstlisting}[style=wider]
+// Declaração de uma Classe que extende a ClasseBase
+@interface ClasseDeExemplo: ClasseBase
+
+@property TipoDaPropriedade nomeDaPropriedade;
+
++ (TipoDeRetorno)mensagemParaClasseComArgumento:(TipoDoArgumento)nomeDoArgumento;
++ (TipoDeRetorno)mensagemParaClasseSemArgumento;
+
+- (void)mensagemParaInstanciaSemArgumentoNemRetorno;
+
+@end
+
+// Implementação de uma Classe
+@implementation ClasseDeExemplo
+
++ (TipoDeRetorno)mensagemParaClasseComArgumento:(TipoDoArgumento)nomeDoArgumento {
+  // Implementação da mensagem como uma função C.
+  // self neste contexto referencia a classe.
+  [self mensagemParaClasseSemArgumento];
+  // ...
+}
+
++ (TipoDeRetorno)mensagemParaClasseSemArgumento {
+  //...
+}
+
+- (void)mensagemParaInstanciaSemArgumento {
+  // self neste contexto referencia a instância da classe.
+
+  // exemplo de leitura do valor de uma propriedade:
+  [self nomeDaPropriedade]
+
+  // exemplo de escrita do valor de uma propriedade:
+  [self setNomeDaPropriedade: novoValor]
+}
+
+@end
+\end{lstlisting}
+
+  \caption{Exemplo de uma classe em \emph{Objective-C}\label{prog:sampleclass}}
+\end{program}
+
+\subsection{Protocolos}
+\label{sec:protocol}
+
+Protocolo é um mecanismo de \emph{Objective-C} que funciona de forma similar a interfaces em \emph{Java}.
+Ele permite definir um conjuntos de seletores e avaliar se uma classe implementa essas mensagens ou não.
+A linguagem provê uma sintaxe especial para declarar que uma classe expressar conformidade com um dado protocolo.
+
+O uso de protocolos é importante por permitir adição de comportamentos por composição a invés de herança.
+O Programa~\ref{prog:sampleproto} ilustra a declaracão de um protocolo e sua conformidade por duas classes.
+Mesmo que ambas as declarações das classes não listem o seletor \texttt{- (double)area}, a comfirmadade
+com o protocolo \texttt{seletores} implica na existência de uma implementação para o seletor.
+
+\begin{program}
+  \centering
+
+\lstset{language=[Objective]C}
+\begin{lstlisting}[style=wider]
+// Declaração de um protocolo que extende o protocolo NSObject
+@protocol FiguraComArea <NSObject>
+
+- (double)area;
+
+@end
+
+// Declaração de uma classe que atende aos requisitos do protocolo FiguraComArea
+@interface Quadrado: NSObject <FiguraComArea>
+
+@property double largura;
+
+@end
+
+// Declaração de outra classe que atende aos requisitos do protocolo FiguraComArea
+@interface Circulo: NSObject <FiguraComArea>
+
+@property double raio;
+
+@end
+
+\end{lstlisting}
+
+  \caption{Exemplo do uso de protocolos em \emph{Objective-C}\label{prog:sampleproto}}
+\end{program}
+
+\subsection{Blocos}
+\label{sec:blocks}
+
+\emph{Block} ou bloco é uma extensão desenvolvida pela \emph{Apple} para as linguagens
+\emph{C} e \emph{Objetive-C} \citep{Blocos}. Ela permite a declaração de \emph{closures} que capazer
+de capturar valores do contexto de criação e posteriormente serem chamados como funções
+de \emph{C}.
+
+O Programa~\ref{prog:sampleblocks} ilustra a declaracão do tipo de um bloco, sua definição e utilização
+através de um programa que cria blocos que retornam um múltiplo de o valor passado como argumento.
+
+\begin{program}
+  \centering
+
+\lstset{language=[Objective]C}
+\begin{lstlisting}[style=wider]
+#import <Foundation/Foundation.h>
+
+// Definição do tipo de um bloco que recebe um inteiro e devolve um inteiro.
+typedef int (^Multiplicador)(int);
+
+Multiplicador criaMultiplicador(int multiplicador) {
+  // Criação de um bloco que captura o valor do multiplicador
+	Multiplicador bloco = ^(int valor) {
+		return valor * multiplicador;
+	};
+	return bloco;
+}
+
+int main() {
+	@autoreleasepool {
+		Multiplicador dobro = criaMultiplicador(2);
+		Multiplicador triplo = criaMultiplicador(3);
+		printf("%d * 2 = %d\n", 5, dobro(5));
+    // 5 * 2 = 10
+		printf("%d * 3 = %d\n", 8, triplo(8));
+    // 8 * 3 = 24
+		printf("%d * 6 = %d\n", 7, triplo(dobro(7)));
+    // 7 * 6 = 42
+	}
+	return 0;
+}
+\end{lstlisting}
+
+  \caption{Exemplo do uso de blocos em \emph{Objective-C}\label{prog:sampleblocks}}
+\end{program}
+
+\newpage
+\section{Matriz de porta programáveis}
+\label{sec:FPGA}
+
+Matriz de porta programáveis (FPGA) é um 
+dispositivo constituído por blocos de lógica programável (CLB do inglês 
+\emph{configurable logic block}), interconectores e blocos de entrada e saída 
+(IOB do inglês \emph{input output block}) que são configurados para implementar um dado
+circuito lógico.
+
+A primeira FPGA, a \emph{XC2064}, foi introduzida em 1984 pela \emph{Xilinx} \citep{8392473}
+contendo 64 CBLs \emph{XCSP}. A \emph{7 series}, uma família de FPGAs lançada em 2010 pela \emph{Xilinx} 
+\citep{S7LN} conta com modelos com até 305 mil CBLs \citep{7CLB}, sendo as CLBs da \emph{7 series}
+capazes de representar circuitos mais complexos que as CLBs da \emph{XC2064}.
+
+O alto custo inicial para a fabricação de um \emph{chip} em relação a aquisição de FPGAs e o aumento dos
+circuitos que podem ser implementados nelas permitem que elas sejam usadas tanto no processo de 
+desenvolvimento de um circuito integrado (CI) quanto no produto final dependendo da escala do projeto
+através da adição de alguma memória que guarda a configuração desejada para ser carregada ao ligar a FPGA.
+
+\subsection{Blocos de lógica programável }
+\label{sec:clb}
+
+Um bloco de lógica programável de uma FPGA pode ser tão simples quanto um transistor ou tão complexo quanto um
+microprocessador, sendo capaz de implementar diferentes circuitos combinacionais e sequenciais \citep{rose1993architecture}.
+
+Uma possibilidade de implementação de um CLB é o uso de um tabela de pesquisa ou \emph{lookup table} (LUT) combinadas com um
+\emph{flip-flop} e um multiplexador. A tabela é configurada com valores para representar um circuito combinacional e os seletores da tabela
+são ligados aos sinais de entradas do CLB. A saída da tabela é ligada no \emph{flip-flop} e tanto a saída da tabela quanto a saída do \emph{flip-flop} são
+ligadas no multiplexador, cuja a saída é ligada na saída da CLB. Um bit de configuração define o valor de saída do multiplexador e a entrada para
+alterar o valor do \emph{flip-flop} é ligada aos sinais de entrada da CLB.
+
+
+\subsection{Interconectores}
+\label{sec:inter}
+
+Interconectores são fios que ligam as diversas entradas e saídas das CLBs e IOBs entre si através de uma malha com roteamento customizável.
+Uma série de pontos de conexão onde fios se sobrepõem utilizam um \emph{bit} de configuração para determinar se os fios devem ser conectados ou não.
+
+Eles representam a maior parte da área de uma FPGA devido a possibilidade de conexões ser exponencial em relação ao número de sinais de CLBs e IOBs.
+Desse modo as FPGAs implementam diversas estratégias para permitir o uso eficiente do espaço do \emph{chip} e ainda permitir que blocos distantes 
+se sejam conectados entre si.
+
+\subsection{Blocos de entrada e saída}
+\label{sec:iob}
+
+Blocos de entrada e saída são responsáveis para garantir que sinais externos sejam refletidos internamente dentro dos parâmetros de configuração da FPGA e
+que os sinais internos sejam propagados para fora da FPGA com parâmetros de tensão e correntes desejados.
+
+
+
+
+
+
+
+
+
+
+
+
+
+

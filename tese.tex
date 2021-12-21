@@ -60,6 +60,20 @@
 \input{extras/source-code}
 \input{extras/utils}
 
+\usepackage{changepage}
+
+\usepackage{pgf}
+\usepackage{tikz}
+\usetikzlibrary{arrows,automata}
+
+\tikzset{
+    ->,  % makes the edges directed
+    >=stealth', % makes the arrow heads bold
+    node distance=3cm, % specifies the minimum distance between two nodes. Change if n
+    every state/.style={thick, fill=gray!10}, % sets the properties for each ’state’ n
+    initial text=$ $, % sets the text that appears on the start arrow
+}
+
 % Diretórios onde estão as figuras; com isso, não é preciso colocar o caminho
 % completo em \includegraphics (e nem a extensão).
 \graphicspath{{figuras/},{logos/}}
