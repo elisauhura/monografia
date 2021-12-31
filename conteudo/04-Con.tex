@@ -6,10 +6,41 @@
 \chapter{Conclusão}
 \label{cap:4}
 
-\section{Análise de desempenho}
-\label{sec:desem}
+Desenvolver um processador RISC-V é uma tarefa extensa, que exige uma ampla gama
+de conhecimento para ser realizada. A princípio, a ISA ser aberta se mostra como
+fator convidativo, em contraste com conjuntos de instruções mais populares, que
+costumam ser proprietários, como ARM e x86. No entanto, a RISC-V é flexível para
+atender casos de uso bastante variados e para oferecer a tal característica, coloca no
+desenvolvedor a responsabilidade de tomar diversas decisões acerca do ambiente de
+execução, tais como: \emph{endianness}, organização da memória e mapeamento de dispositivos
+de entrada e saída. A fim de agilizar o projeto, o desenvolvedor pode optar por utilizar
+os padrões definidos em outras implementações ou até mesmo iniciar sua própria
+implementação a partir de uma de código já existente.
 
-\section{Considerações sobre o desenvolvimento de processadores RISC-V}
-\label{sec:fim}
+Definido o conjunto de instruções oferecidos pelo processador, é preciso ponderar
+sobre a maneira com que as instruções serão executadas, os requisitos do projeto devem
+guiar essa escolha. Apesar de técnicas como \emph{pipelining} oferecerem
+ganhos substanciais de desempenho, o projeto é penalizado com o aumento de complexidade, 
+prolongando sua execução. Portanto, é uma boa prática ater-se à uma microarquitetura menos 
+complexa, contanto que atenda aos requisitos impostos.
 
+Com os detalhes do processador definidos, o projeto deve ser estruturado de modo adequado 
+para o desenvolvimento e verificação dos módulos. Enquanto o uso de uma HDL costuma ser 
+satisfatório para a descrição do \emph{hardware}, a verificação é compreendida por etapas em que
+apenas o seu uso pode ser contra produtivo. Devido ao aumento exponencial do número de estados
+em relação ao aumento do número de células de memória no projeto, o tempo gasto na verificação
+acaba sendo muito maior que o tempo gasto na descrição dos componentes, e assim, a dedicação
+de um tempo maior para o desenvolvimento de um sistema de testes mais sofisticado é
+justificada com a redução no tempo para a escrita das verificações.
 
+\section{Próximos passos}
+\label{sec:aaaaaaaaa}
+
+Em relação ao processador, é possível adicionar mais extensões,
+como a extensão M, que acelera operações matemáticas com valores inteiros, e
+expandir o modelo da memória para ter acesso a outros dispositivos de entrada e saída,
+ou módulos de memória DDR3, aumentando o espaço disponível para programas.
+No que se refere ao sistema de teste, é interessante explorar em iterações futuras
+a implementação de roteiros mais complexos para simplificar a escrita
+de testes que fazem uso de técnicas, como \emph{fuzzing}, utilizada para 
+cobrir um número maior de estados durante os testes.

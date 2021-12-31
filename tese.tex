@@ -64,6 +64,7 @@
 
 \usepackage{pgf}
 \usepackage{tikz}
+\usepackage{graphicx}
 \usetikzlibrary{arrows,automata}
 
 \tikzset{
@@ -73,6 +74,9 @@
     every state/.style={thick, fill=gray!10}, % sets the properties for each ’state’ n
     initial text=$ $, % sets the text that appears on the start arrow
 }
+
+\newcommand{\mdoubleplus}{+\!\!+}
+\newcommand{\mdp}{{+\!\!+}}
 
 % Diretórios onde estão as figuras; com isso, não é preciso colocar o caminho
 % completo em \includegraphics (e nem a extensão).
@@ -190,29 +194,29 @@
 
 %%%% Apêndices %%%%
 
-\makeatletter
-\if@openright\cleardoublepage\else\clearpage\fi
-\makeatother
+% \makeatletter
+% \if@openright\cleardoublepage\else\clearpage\fi
+% \makeatother
 
-\pagestyle{appendix}
+% \pagestyle{appendix}
 
-\appendix
+% \appendix
 
-\input{conteudo/apendices}
-\par
+% \input{conteudo/apendices}
+% \par
 
 %%%% Anexos %%%%
 
-\makeatletter
-\if@openright\cleardoublepage\else\clearpage\fi
-\makeatother
+% \makeatletter
+% \if@openright\cleardoublepage\else\clearpage\fi
+% \makeatother
 
-\pagestyle{appendix} % repete o anterior, caso você não use apêndices
+% \pagestyle{appendix} % repete o anterior, caso você não use apêndices
 
-\annex
+% \annex
 
-\input{conteudo/anexos}
-\par
+% \input{conteudo/anexos}
+% \par
 
 
 %%%%%%%%%%%%%%% SEÇÕES FINAIS (BIBLIOGRAFIA E ÍNDICE REMISSIVO) %%%%%%%%%%%%%%%%

@@ -9,62 +9,64 @@
 \section{Contextualização}
 \label{sec:ic}
 
-A RISC-V é uma arquitetura de conjunto de instruções (ISA do inglês 
-\emph{instruction set architecture}) aberta e disponível de forma gratuita 
+A RISC-V é uma arquitetura de conjunto de instruções (ISA, do inglês 
+\emph{instruction set architecture}) aberta e disponível de forma gratuita, 
 tanto para uso na indústria quanto na academia. 
-Ela é padronizada e patrocinada pela \emph{RISC-V International}, uma organização 
-internacional sem fins lucrativos que possui dentre seus membros grandes 
-empresas do setor de tecnologia como \emph{Google}, \emph{Alibaba Cloud} e 
+Ela é padronizada e patrocinada pela organização 
+internacional sem fins lucrativos \emph{RISC-V International},
+que possui dentre seus membros grandes 
+empresas do setor de tecnologia, como \emph{Google}, \emph{Alibaba Cloud} e 
 \emph{Western Digital} \citep{MEM}.
 
-Ela teve seu início em 2010 através do trabalho do professor Krste Asanović e os 
-alunos de pós graduação Yunsup Lee e Andrew Waterman no \emph{Parallel Computing
-Laboratory} na \emph{UC Berkeley} \citep{RVH}, sendo desde o começo disponível 
-através de alguma licença aberta. Com o tempo o projeto evoluiu e a ISA passou 
-a incorporar o objetivo de ser a arquitetura padrão para todos os dispositivos 
+Ela teve início em 2010, através do trabalho do professor Krste Asanović e os 
+alunos de pós-graduação Yunsup Lee e Andrew Waterman no \emph{Parallel Computing
+Laboratory} da \emph{UC Berkeley} \citep{RVH}, e foi desde o começo, disponível 
+através de uma licença aberta. O projeto evoluiu com o tempo e a ISA passou 
+a incorporar o objetivo principal de ser a arquitetura padrão para todos os dispositivos 
 computacionais \citep{Asanović:EECS-2014-146}.
 
-Assim as decisões de design da arquitetura são tomadas considerando decisões 
+Assim, as decisões de design da arquitetura são tomadas considerando escolhas 
 realizadas por arquiteturas anteriores e suas implicações. Desse modo, a RISC-V
-evita \emph{erros} cometidos por arquiteturas anteriores.
+evita erros cometidos por arquiteturas anteriores.
 
-Um exemplo é a ausência de instruções com \emph{delay slot}, uma técnica usada 
-em arquiteturas como a MIPS \citep{DSTL}, onde instruções logo após uma instrução
-de pulo são executadas antes do pulo ser executado. Esse tipo de decisão de design
-favorece implementações que fazem uso de técnicas de \emph{pipeline}, que eram
-populares na época, porém aumenta a complexidade de implementações \emph{in-order} 
+Um exemplo dessa decisões é 
+ausência de instruções com \emph{delay slot}, uma técnica usada 
+em arquiteturas, como a MIPS \citep{DSTL} em que a instrução logo após uma instrução
+de pulo é executada antes que a primeira seja executada. Esse tipo de decisão de design
+favorece implementações que fazem uso de técnicas de \emph{pipeline},
+populares na época de criação da ISA MIPS, porém aumentam a complexidade de implementações \emph{in-order} 
 da arquitetura.
 
 O diferencial da arquitetura é a disponibilidade de núcleos de propriedade intelectual
-de semicondutores (IP do inglês \emph{intellectual property}) abertos para os mais 
-diversos casos de uso, como o \emph{PicoRV} \citep{PICO} para sistemas embarcados, 
+de semicondutores (IP, do inglês \emph{intellectual property}) abertos para os mais 
+diversos casos de uso, como o \emph{PicoRV} \citep{PICO} voltado para sistemas embarcados, 
 o \emph{Vortex} \citep{elsabbagh2020vortex} que usa núcleos RISC-V como aceleradores 
-gráficos ou o \emph{Xuantie-910} \citep{9138983} destinado ao uso em servidores.
+gráficos, ou o \emph{Xuantie-910} \citep{9138983} destinado ao uso em servidores.
 
-Além da disponibilidade de IPs, a arquitetura conta com o suporte de diversas 
-linguagens de programação como \emph{Go} \citep{GOL}, \emph{C/C++} \citep{RVGCC} e
-linguagens que fazem uso da \emph{LLVM} \citep{RVLLVM}, bem como o suporte de sistemas 
-operacionais como o Debian \citep{RVDB}.
+Além da disponibilidade de IPs, diversos
+programas oferecem suporte a arquitetura, como o \emph{kernel Linux} desde a versão 4.19, o
+sistema operacional Debian \citep{RVDB} e diversas
+linguagens de programação, como \emph{Go} \citep{GOL}, \emph{C/C++} \citep{RVGCC} e
+linguagens que fazem uso da \emph{LLVM} \citep{RVLLVM}.
 
 \section{Objetivos}
 \label{sec:io}
 
-O objetivo deste trabalho é registrar o processo de desenvolvimento de um processador 
-usando a arquitetura RISC-V desde a definição do ambiente até a síntese para uso em uma 
-matriz de porta programáveis com um enfoque na etapa de verificação através do testes 
-com base na simulação dos componentes.
+O objetivo deste trabalho foi de apresentar o processo de desenvolvimento de um processador 
+utilizando a arquitetura RISC-V, desde a definição do ambiente até a síntese para uso em uma 
+matriz de porta programáveis (FPGA, do inglês \emph{field-programmable gate array}), com um enfoque na etapa de verificação,
+através de testes baseados na simulação dos componentes.
 
 \section{Metodologia}
 \label{sec:im}
 
 O desenvolvimento de IPs é feito usando uma linguagem de descrição de \emph{hardware} 
-(HDL do inglês \emph{hardware description language}) sendo a \emph{Verilog} e a 
-\emph{VHDL} as mais bem suportadas na indústria. Com base na descrição é possível 
-simular o comportamento do IP ou sintetizar um configuração para uso em 
-matriz de porta programáveis (FPGA do inglês \emph{field-programmable gate array}) ou 
-para fabricação de um \emph{chip}.
+(HDL, do inglês \emph{hardware description language}) sendo a \emph{Verilog} e a 
+\emph{VHDL} as mais utilizadas na indústria. Com base na descrição, é possível 
+simular o comportamento do IP, sintetizar uma configuração para uso em 
+matriz de porta programáveis ou para fabricação de um \emph{chip}.
 
-O desenvolvimento de um processador envolve diversas etapas desde sua concepção até a sintetização para
+O desenvolvimento de um processador envolve inúmeras etapas desde sua concepção até a sintetização para
 uso em uma FPGA ou produção de um \emph{chip}. 
 Além da escolha da ISA, é necessário definir detalhes do ambiente 
 de execução que não são definidos pela arquitetura, escolha do design do processador, desenvolvimento da 
@@ -72,21 +74,20 @@ descrição do \emph{hardware}, uso de testes para verificar a descrição e an�
 correto do circuito.
 
 Este trabalho foi divido nas etapas de \emph{planejamento e preparação}, 
-\emph{desenvolvimento da descrição} e \emph{verificação}.
-Na etapa de \emph{planejamento e preparação} foi definida as tecnologias utilizadas,
-estruturação do projeto e desenvolvimento de bibliotecas auxiliares. 
-Na etapa de \emph{desenvolvimento da descrição} foi desenvolvido os módulos que constituem o
-processador. E na etapa
-\emph{verificação} foram desenvolvidos testes para validar o comportamento do \emph{hardware}.
+\emph{desenvolvimento da descrição} e \emph{verificação}:
+na etapa de \emph{planejamento e preparação} foram definidas as tecnologias utilizadas,
+estruturação do projeto e desenvolvimento de bibliotecas auxiliares. Já
+na etapa de \emph{desenvolvimento da descrição}, foram desenvolvidos os módulos que constituem o
+processador, e na etapa
+\emph{verificação}, foram desenvolvidos testes para validar o comportamento do \emph{hardware}.
 
 \section{Organização do texto}
 \label{sec:it}
 
-O texto desta monografia é dividido em capítulos que podem apresentações seções e subseções. 
-O Capítulo~\ref{cap:2} aborda a notação para manipulação de vetores e conceitos relacionado,
-a parte utilizada da arquitetura RISC-V, apresenta uma introdução às linguagens \emph{Verilog}
-e \emph{Objective-C} e por fim descreve as partes constituintes de uma FPGA.
-
-No Capítulo~\ref{cap:3} é descrita a estrutura e \emph{design} do processador e o sistema de testes.
-O Capítulo~\ref{cap:4} conclui a monografia com resultados de análise de desempenho do processador 
-e reflexões sobre o desenvolvimento da CPU.
+O texto desta monografia é dividido em capítulos que podem apresentar seções e subseções: 
+o Capítulo~\ref{cap:2} aborda a notação para manipulação de vetores e conceitos relacionados,
+a parte utilizada da arquitetura RISC-V, expõe uma introdução às linguagens \emph{Verilog}
+e \emph{Objective-C} e descreve as partes constituintes de uma FPGA; no Capítulo~\ref{cap:3}, 
+é descrita a estrutura e \emph{design} do processador e o sistema de testes;
+o Capítulo~\ref{cap:4} apresenta a conclusão da monografia, com uma análise sobre o processo de
+desenvolvimento da CPU.
