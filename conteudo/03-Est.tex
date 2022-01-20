@@ -147,7 +147,7 @@ para as outras unidades e, quando necessário, levanta exceções ou interrupç�
 organiza as operações que envolvem acesso à memória.
 A unidade mantém um registrador interno de estado que reflete o estado do processador na máquina de estados, e com base nesse
 registrador e em outros sinais de controle, a unidade atualiza seu estado durante a subida do \emph{clock}. Ela também contém 
-as outras unidades e realiza o roteamento necessário de sinais entre as elas.
+as outras unidades e realiza o roteamento necessário de sinais entre elas.
 
 \subsection{Unidade de decodificação}
 \label{ssec:decode}
@@ -181,7 +181,7 @@ campos $funct3$ e $funct7[5]$ da instrução.
 \label{ssec:memfile}
 
 O arquivo de registro é a unidade que contém o valor dos trinta e dois registradores. Ela possui três seletores de entrada, em que
-os dois primeiros determinam os registradores cuja os valores são emitidos nas duas saídas de 32 \emph{bits}. O terceiro
+os dois primeiros determinam os registradores cujos valores são emitidos nas duas saídas de 32 \emph{bits}. O terceiro
 é acompanhando de um sinal de entrada de 32 \emph{bits} e, quando o \emph{clock} sobe e o seletor não possui o valor 0,
 o valor do registrador é alterado de acordo com o valor do sinal de entrada.
 
@@ -198,7 +198,7 @@ disponibilidade fica alto, o valor é refletido no sinal de valor lido. O sinal 
 sobe quando a região processada é considerada inválida, como a escrita em uma região que não seja
 coberta pelas seções sA, sB, sC e sD.
 
-O sinal de comando emitido pelo controlado pode ser de: ``sem comando'', leitura de 1, 2 ou 4 \emph{byte} e
+O sinal de comando emitido pelo controlador pode ser de: ``sem comando'', leitura de 1, 2 ou 4 \emph{bytes} e
 escrita de 1, 2 ou 4 \emph{bytes}. Os sinais de endereço de memória e valor a ser escrito são capturados
 pela interface quando o \emph{clock} sobe, o sinal de comando é diferente de ``sem comando'' e o sinal
 de disponibilidade está alto.
@@ -212,7 +212,7 @@ enviados e lidos são mantidos em filas de 8 \emph{bytes} que permitem inserçã
 
 As linhas de comunicação são mantidas com o sinal alto enquanto não estiverem transmitindo valores.
 Quando um \emph{byte} $B$ é transmitido, primeiramente é transmitido um \emph{bit} de valor 0, depois
-os valores dos \emph{bits} de B da menor posição menor para maior e por fim um \emph{bit} de valor 1.
+os valores dos \emph{bits} de B da menor posição para a maior e por fim um \emph{bit} de valor 1.
 A lógica inversa é utilizada para receber um \emph{byte}, primeiro detectando o momento em que o 
 sinal de recepção vai do estado alto para o baixo, aguardando meio período de transmissão de um \emph{bit} 
 para então capturar
@@ -244,9 +244,9 @@ classe intermediária, define as seguintes funções:
   \item \texttt{UHRMake$Exemplo$} que devolve um ponteiro opaco para uma instância da classe intermediária, que permite a simulação
         do circuito utilizando as classes geradas pelo \emph{Verilator}.
   \item \texttt{UHRDestroy$Exemplo$} que recebe um ponteiro opaco da instância para ser destruído.
-  \item \texttt{UHRPoke$Exemplo$} que recebe o ponteiro opaco, um número que represental um sinal de entrada ou um \emph{reg} interno do módulo e um valor para
+  \item \texttt{UHRPoke$Exemplo$} que recebe o ponteiro opaco, um número que representa um sinal de entrada ou um \emph{reg} interno do módulo e um valor para
         alterar o valor do sinal utilizando as classes geradas pelo \emph{Verilator}.
-  \item \texttt{UHRPeek$Exemplo$} que recebe o ponteiro opaco, um número que represental um sinal de entrada ou saída ou um \emph{reg} ou um \emph{wire} interno e 
+  \item \texttt{UHRPeek$Exemplo$} que recebe o ponteiro opaco, um número que representa um sinal de entrada ou saída ou um \emph{reg} ou um \emph{wire} interno e 
         devolve o valor do sinal.
   \item \texttt{UHREval$Exemplo$} que recebe o ponteiro e uma marca de tempo e aplica todas as alterações de valor dos sinais geradas com função UHRPoke$Exemplo$ desde a última chamada
         de \texttt{UHREval$Exemplo$}. Essas alterações são aplicadas de forma simultânea na marca de tempo passada como argumento e é computado o novo estado dos 

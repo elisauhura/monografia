@@ -48,7 +48,7 @@ e \emph{Objective-C} e a descrição das partes constituintes de uma FPGA.
   Um vetor é uma sequência de elementos que possuem o mesmo número de estados possíveis, 
   em que seus valores podem ser acessados com base na sua posição no vetor. 
   O primeiro elemento de um vetor começa na posição $0$, o segundo na posição $1$,
-  e assim por diante. O tamanho de um vetor representa a quantidade de elementos queo mesmo contém,
+  e assim por diante. O tamanho de um vetor representa a quantidade de elementos que o mesmo contém,
   sendo o tamanho sempre maior que $0$. Uma posição é considerada válida se ela for maior ou igual a $0$ e 
   menor que o tamanho do vetor.
 
@@ -62,8 +62,8 @@ e \emph{Objective-C} e a descrição das partes constituintes de uma FPGA.
   O sobrescrito, chamado de formato do vetor, pode ser omitido caso não seja importante
   ou já seja conhecido.
 
-  O valor de um elemento localizado na posição $a$ válida de um vetor $A$ é representado 
-  pela notação $A[a]$. O vetor $A$ formado pelos elementos $a_0, a_1, a_2,..., a_n,$ 
+  O valor de um elemento localizado na posição $i$ válida de um vetor $A$ é representado 
+  pela notação $A[i]$. O vetor $A$ formado pelos elementos $a_0, a_1, a_2,..., a_n,$ 
   de mesmo tipo é representado por $\{a_0, a_1, a_2,..., a_n\}$ onde $A[i] = a_i$.
   Dado dois vetores quaisquer $A^{X'I}$ e $B^{X'J}$, $A \mdp B$ representa um vetor $C$ 
   de tamanho $I + J$ tal que $C[i] = B[i]$ se $i < J$ e $C[i] = A[i-J]$ caso contrário,
@@ -73,7 +73,7 @@ e \emph{Objective-C} e a descrição das partes constituintes de uma FPGA.
   válidas é o vetor dado por $\Lambda_{a = n}^m{\{A[a]\}}$, em que $[m\text{:}n]$ é denominado 
   intervalo.
   O operador $\Lambda$ é análogo ao $\textstyle \sum$, porém ele aplica operações $ \mdoubleplus $ no lugar de $+$.
-  Dado intervalos $a_0, a_1, a_2,..., a_n$ de um mesmo vetor $A$, $A[a_0|a_1|a_2|...|a_n] 
+  Dado intervalos $a_0, a_1, a_2,..., a_n$ de um mesmo vetor $A$, onde cada $a_i$ representa um par $m\text{:}n$ qualquer, $A[a_0|a_1|a_2|...|a_n] 
   = A[a_0] \mdp A[a_1] \mdp A[a_2] \mdp … \mdp A[a_n]$.
 
   O tamanho de um vetor $A$ é denotado por $\#A$, o tipo de um de seus elementos é denotado 
@@ -133,7 +133,7 @@ e \emph{Objective-C} e a descrição das partes constituintes de uma FPGA.
   $|^+B| = |^+\alpha B|$.
 
   Se tratando de valores \emph{signed} ao definir um vetor de maior tamanho cujo valor 
-  \emph{signed} é igual ao de um vetor de menor tamanho. A fim de
+  \emph{signed} é igual ao de um vetor de menor tamanho, a fim de
   preservar o valor, os \emph{bits} adicionados 
   devem ser iguais ao valor do \emph{bit} na maior posição do vetor de menor valor. Esse processo é 
   chamado de \emph{sign-extension} ou extensão com sinal, enquanto a \emph{unsigned-extension} ou extensão
@@ -457,7 +457,7 @@ e \emph{Objective-C} e a descrição das partes constituintes de uma FPGA.
     computadas utilizando o valor de dois registradores ou um registrador e um valor imediato derivado da instrução e o resultado
     é armazenado em algum registrador.
 
-    A arquitetura inclui as operações de soma ($+$), subtração ($-$), comparação de menor \emph{signed} ($<_s$)e \emph{unsigned} $<_u$,
+    A arquitetura inclui as operações de soma ($+$), subtração ($-$), comparação de menor \emph{signed} ($<_s$) e \emph{unsigned} $<_u$,
     operações binárias \emph{and} ($\land$), \emph{or} ($\lor$) e \emph{xor} ($\oplus$) e operações de deslocamento para esquerda
     ($\ll$), para direita ($\gg$) e aritmético para direita ($\ggg$).
 
@@ -550,7 +550,7 @@ AUIPC & $rd, imm$ & U$(55)(rd, imm)$ & $reg[|rd|]$ passa a ser igual a ${imm + p
   seria executada caso o pulo não tivesse ocorrido é armazenado em $rd$, processo chamado de \emph{link}.
 
   Instruções de ramificação utilizam o formato B e alteram o valor do $pc$ de forma condicional. Caso o critério de teste
-  da instrução seja atendido, ele altera o valor do $pc$ com base em no valor imediato. Caso contrário,
+  da instrução seja atendido, ele altera o valor do $pc$ com base no valor imediato. Caso contrário,
   o $pc$ é incrementado como nas outras instruções.
 
   Considerando $reg^{32'32}$ o vetor de registradores e $pc^{'32}$, a
@@ -584,7 +584,7 @@ BGEU & $rs1, rs2, imm$ & B$(99, 6)(rs1, rs2, imm)$ & Se $rs1 \geq_u rs2$, $pc$ p
   de uma instrução de transferência de controle, o valor do $pc$ continue par, 
   seja pelos valores legais para o imediato no formato da 
   instrução ou pela descrição da instrução (JALR garante $pc[0] = 0$). Já em implementações que aceitam 
-  instruções cujo tamanho seja um múltiplo impar de 16 \emph{bits}, não é possível que a exceção de 
+  instruções cujo tamanho seja um múltiplo ímpar de 16 \emph{bits}, não é possível que a exceção de 
   endereço desalinhado seja levantada.
 
 \subsubsection{Instruções de barreira e chamadas de ambiente}
@@ -757,7 +757,7 @@ CSRRCI & $(rd, uimm, imm)$ & I$(115, 7)(rd, uimm, imm)$ \\ \hline
     \item $mstatus[3\text{:}3]$ (MIE) determina se interrupções estão habilitadas caso seu valor seja 1 e 0 caso contrário.
     \item $mstatus[7\text{:}7]$ (MPIE) guarda o MIE anterior e é utilizada para restaurar o MIE após a execução
           da instrução MRET.
-    \item $mstatus[12\text{:}11]$ (MPP) determina o nível de privilégio a ser defino quando a instrução para retorno de 
+    \item $mstatus[12\text{:}11]$ (MPP) determina o nível de privilégio a ser definido quando a instrução para retorno de 
           interrupção ou exceção ocorra.
     \item $mtvec[1\text{:}0]$ (MODE) determina como o endereço em caso de interrupções é utilizado. Caso o valor seja
           0, o endereço é utilizado diretamente. Caso o valor seja 1, o endereço utilizado é somado com 4 vezes o valor
@@ -776,7 +776,7 @@ CSRRCI & $(rd, uimm, imm)$ & I$(115, 7)(rd, uimm, imm)$ \\ \hline
   \end{itemize}
 
   Quando ocorre uma interrupção, MPIE guarda o valor de MIE, MIE passa a valer 0, o MPP passa a valer o nível
-  de execução no momento em que a execução ocorreu, $mepc$ recebe o valor do $pc$ e os campos $mcause$ e $mtval$
+  de execução no momento em que a interrupção ocorreu, $mepc$ recebe o valor do $pc$ e os campos $mcause$ e $mtval$
   são preenchidos de acordo. O valor do $pc$ é atualizado de acordo com o valor de $mtvec$ e o \emph{hart}
   continua a processar as instruções no modo de máquina.
 
@@ -935,7 +935,7 @@ De modo simplificado ela permite a representação de circuitos através de:
 
 \emph{Wires} podem ser combinados em vetores similares a vetores de \emph{bits}.
 Através de declarações \texttt{assign} é possível definir o valor de \emph{wires} com base em uma expressão 
-de outros \emph{wires} e \emph{regs} com operações similares as as descritas na Seção~\ref{ssec:regimm}.
+de outros \emph{wires} e \emph{regs} com operações similares as descritas na Seção~\ref{ssec:regimm}.
 
 \emph{Regs} também podem ser combinados em vetores similares a vetores de \emph{bits}.
 Através de declarações \texttt{always} é possível definir a atribuição de valores condicionados a um evento.
@@ -1018,7 +1018,7 @@ onde o \emph{wire} \texttt{saida} é a saída e os \emph{wires}
 \texttt{entradas} e \texttt{seletor} são as entradas do módulo.
 
 A expressão \texttt{saida = entradas[seletor]} após a palavra-chave
-\texttt{assign} determina que a saida sempre irá apresentar o valor do
+\texttt{assign} determina que a saída sempre irá apresentar o valor do
 \emph{wire} de \texttt{entradas} na posição determinada pelo valor 
 do vetor de \emph{wires} \texttt{seletor}.
 
